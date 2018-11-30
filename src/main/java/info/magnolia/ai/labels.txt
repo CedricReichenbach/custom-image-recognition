@@ -1,0 +1,9 @@
+person
+woman
+man
+wolf
+guitar
+hat
+whiskey
+tattoo
+clock
