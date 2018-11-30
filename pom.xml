@@ -45,6 +45,12 @@
       <version>${dl4jVersion}</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.deeplearning4j</groupId>
+      <artifactId>deeplearning4j-ui_2.11</artifactId>
+      <version>1.0.0-beta3</version>
+    </dependency>
+
     <!-- main extjwnl dependency -->
     <dependency>
       <groupId>net.sf.extjwnl</groupId>
