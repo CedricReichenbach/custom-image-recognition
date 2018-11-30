@@ -1,15 +1,14 @@
 package info.magnolia.ai;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import net.sf.extjwnl.JWNLException;
 import net.sf.extjwnl.data.IndexWord;
@@ -19,34 +18,64 @@ import net.sf.extjwnl.dictionary.Dictionary;
 
 public class ImageIndex {
 
-    /** Mapping from url to labels. */
-    private final Map<String, Set<IndexWord>> imageLabels = new HashMap<>();
+    /**
+     * Mapping from url to labels.
+     */
+    private final Map<String, Set<IndexWord>> images = new HashMap<>();
+
+    private final List<IndexWord> labels;
 
     public ImageIndex() {
+        try {
+            labels = loadLabels();
+        } catch (IOException | JWNLException | URISyntaxException e) {
+            throw new RuntimeException("Failed to load label list", e);
+        }
         loadImageInfo();
     }
 
-    private void loadImageInfo() throws IOException, JWNLException {
+    private List<IndexWord> loadLabels() throws IOException, JWNLException, URISyntaxException {
+        Path path = Paths.get(getClass().getResource("labels.txt").toURI());
+        List<String> labelStrings = Files.readAllLines(path, Charset.forName("utf-8"));
+
         Dictionary dictionary = Dictionary.getDefaultResourceInstance();
-        List<String> labels = Files.readAllLines(Paths.get("labels.txt"), Charset.forName("utf-8"));
-        for (String label : labels) {
-            IndexWord word = dictionary.lookupIndexWord(POS.NOUN, label);
-            dictionary.
-                    loadForLabel(word);
-        }
+        List<IndexWord> labels = new ArrayList<>();
+        for (String labelString : labelStrings)
+            labels.add(dictionary.lookupIndexWord(POS.NOUN, labelString));
+        return labels;
+    }
+
+    private void loadImageInfo() {
+        labels.forEach(this::loadForLabel);
     }
 
     private void loadForLabel(IndexWord label) {
+        System.out.println("Loading image URLs: " + label.getLemma());
         final Synset synset = label.getSenses().get(0);
-        String response = fetch("http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=" + synset);
-        String[] urls = response.split("\n");
+        String synsetId = String.format("n%08d", synset.getOffset());
+        List<String> urls = fetchLines("http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=" + synsetId);
         for (String url : urls) {
-            if (!imageLabels.containsKey(url)) imageLabels.put(url, new HashSet<>());
-            imageLabels.get(url).add(label);
+            if (!images.containsKey(url)) images.put(url, new HashSet<>());
+            images.get(url).add(label);
         }
     }
 
-    private String fetch(String s) {
-        // TODO
+    private List<String> fetchLines(String url) {
+        List<String> lines = new ArrayList<>();
+        try (Scanner scanner = new Scanner(new URL(url).openStream())) {
+            while (scanner.hasNextLine()) lines.add(scanner.nextLine());
+            return lines;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public List<IndexWord> getLabels() {
+        return new ArrayList<>(labels);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("ImageIndex (%s labels, %s image URLs)", labels.size(), images.keySet().size());
     }
 }

@@ -49,12 +49,12 @@
     <dependency>
       <groupId>net.sf.extjwnl</groupId>
       <artifactId>extjwnl</artifactId>
-      <version>1.9.4</version>
+      <version>1.8.0</version>
     </dependency>
-    <!-- Princeton WordNet 3.1 data dependency -->
+    <!-- Princeton WordNet 3.0 data dependency -->
     <dependency>
       <groupId>net.sf.extjwnl</groupId>
-      <artifactId>extjwnl-data-wn31</artifactId>
+      <artifactId>extjwnl-data-wn30</artifactId>
       <version>1.2</version>
     </dependency>
 

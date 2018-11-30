@@ -1,7 +1,9 @@
 package info.magnolia.ai;
 
 import java.io.IOException;
+import java.util.List;
 
+import net.sf.extjwnl.data.IndexWord;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -16,10 +18,10 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 
 public class NetworkManager {
 
-    private final String[] labels;
+    private final List<IndexWord> labels;
     private final ComputationGraph network;
 
-    public NetworkManager(String[] labels) {
+    public NetworkManager(List<IndexWord> labels) {
         this.labels = labels;
         network = buildNetwork();
     }
@@ -43,7 +45,7 @@ public class NetworkManager {
                 .removeVertexKeepConnections("predictions")
                 .addLayer("predictions",
                         new OutputLayer.Builder(LossFunctions.LossFunction.XENT)
-                                .nIn(4096).nOut(labels.length) // santa hat or not santa hat
+                                .nIn(4096).nOut(labels.size())
                                 .weightInit(WeightInit.ZERO)
                                 .activation(Activation.SIGMOID)
                                 .build(), "fc2")
