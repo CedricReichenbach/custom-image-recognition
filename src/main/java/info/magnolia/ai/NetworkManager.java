@@ -6,6 +6,7 @@ import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.transferlearning.FineTuneConfiguration;
 import org.deeplearning4j.nn.transferlearning.TransferLearning;
+import org.deeplearning4j.nn.transferlearning.TransferLearningHelper;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.stats.StatsListener;
@@ -48,18 +49,17 @@ public class NetworkManager {
 
         final FineTuneConfiguration fineTuneConfiguration = new FineTuneConfiguration.Builder()
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
-                .updater(new Nesterovs(1e-4, 0.1))
+                .updater(new Nesterovs(1e-4, 0.5))
                 .build();
         ComputationGraph transferGraph = new TransferLearning.GraphBuilder(pretrainedNet)
                 .fineTuneConfiguration(fineTuneConfiguration)
                 .setFeatureExtractor("fc2") // freeze this and below
-//                .removeVertexAndConnections("predictions") // XXX: Maybe this?
                 .removeVertexKeepConnections("predictions")
                 .addLayer("predictions",
-                        new OutputLayer.Builder(LossFunctions.LossFunction.XENT)
+                        new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
                                 .nIn(4096).nOut(labels.size())
                                 .weightInit(WeightInit.ZERO)
-                                .activation(Activation.SIGMOID)
+                                .activation(Activation.SOFTMAX)
                                 .build(), "fc2")
                 .build();
 
@@ -70,15 +70,21 @@ public class NetworkManager {
     }
 
     public void train(DataSetIterator trainIterator, DataSetIterator testIterator, int epochs) {
-        network.evaluate(testIterator);
+        TransferLearningHelper transferHelper = new TransferLearningHelper(network);
+
+        System.out.println(transferHelper.unfrozenGraph().evaluate(testIterator));
         testIterator.reset();
 
         for (int i = 0; i < epochs; i++) {
-            network.fit(trainIterator);
+            System.out.println("Starting training epoch " + i);
+
+            transferHelper.fitFeaturized(trainIterator);
             trainIterator.reset();
 
-            network.evaluate(testIterator);
+            System.out.println(transferHelper.unfrozenGraph().evaluate(testIterator));
             testIterator.reset();
         }
+
+        System.out.println("Training complete");
     }
 }
