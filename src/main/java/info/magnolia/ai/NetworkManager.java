@@ -13,6 +13,7 @@ import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.deeplearning4j.zoo.PretrainedType;
 import org.deeplearning4j.zoo.model.VGG16;
 import org.nd4j.linalg.activations.Activation;
+import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
@@ -66,5 +67,18 @@ public class NetworkManager {
         System.out.println(transferGraph.summary());
 
         return pretrainedNet;
+    }
+
+    public void train(DataSetIterator trainIterator, DataSetIterator testIterator, int epochs) {
+        network.evaluate(testIterator);
+        testIterator.reset();
+
+        for (int i = 0; i < epochs; i++) {
+            network.fit(trainIterator);
+            trainIterator.reset();
+
+            network.evaluate(testIterator);
+            testIterator.reset();
+        }
     }
 }

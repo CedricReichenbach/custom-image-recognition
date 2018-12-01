@@ -73,6 +73,10 @@ public class ImageIndex {
         return new ArrayList<>(labels);
     }
 
+    public Map<String, Set<IndexWord>> getImages() {
+        return images;
+    }
+
     @Override
     public String toString() {
         return String.format("ImageIndex (%s labels, %s image URLs)", labels.size(), images.keySet().size());
