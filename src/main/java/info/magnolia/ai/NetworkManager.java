@@ -66,7 +66,7 @@ public class NetworkManager {
         System.out.println("Transfer model:");
         System.out.println(transferGraph.summary());
 
-        return pretrainedNet;
+        return transferGraph;
     }
 
     public void train(DataSetIterator trainIterator, DataSetIterator testIterator, int epochs) {
