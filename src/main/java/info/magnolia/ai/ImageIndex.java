@@ -25,6 +25,8 @@ import net.sf.extjwnl.dictionary.Dictionary;
 
 public class ImageIndex {
 
+    private final List<String> availableSynsets;
+
     /**
      * Mapping from url to labels.
      */
@@ -33,6 +35,7 @@ public class ImageIndex {
     private final List<IndexWord> labels;
 
     public ImageIndex() {
+        availableSynsets = fetchLines("http://www.image-net.org/api/text/imagenet.synset.obtain_synset_list");
         try {
             labels = loadLabels();
         } catch (IOException | JWNLException | URISyntaxException e) {
@@ -57,9 +60,19 @@ public class ImageIndex {
     }
 
     private void loadForLabel(IndexWord label) {
-        System.out.println("Loading image URLs: " + label.getLemma());
-        final Synset synset = label.getSenses().get(0);
-        String synsetId = String.format("n%08d", synset.getOffset());
+        System.out.print("Loading image URLs: " + label.getLemma());
+
+        String synsetId = null;
+        for (Synset synset : label.getSenses()) {
+            synsetId = String.format("n%08d", synset.getOffset());
+            if (availableSynsets.contains(synsetId)) {
+                System.out.print(" -> " + synset);
+                break;
+            } else synsetId = null;
+        }
+        System.out.println();
+        if (synsetId == null) throw new IllegalArgumentException("No supported synset found for label: " + label.getLemma());
+
         List<String> urls = fetchLines("http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=" + synsetId);
 
         if (urls.size() == 1 && !URI.isWellFormedAddress(urls.get(0)))

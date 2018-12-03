@@ -1,6 +1,6 @@
 person
-woman
-man
+female person
+male person
 wolf
 guitar
 hat
