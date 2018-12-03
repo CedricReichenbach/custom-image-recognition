@@ -1,11 +1,5 @@
 package info.magnolia.ai;
 
-import net.sf.extjwnl.JWNLException;
-import net.sf.extjwnl.data.IndexWord;
-import net.sf.extjwnl.data.POS;
-import net.sf.extjwnl.data.Synset;
-import net.sf.extjwnl.dictionary.Dictionary;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -13,7 +7,21 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
+
+import org.apache.xerces.util.URI;
+
+import net.sf.extjwnl.JWNLException;
+import net.sf.extjwnl.data.IndexWord;
+import net.sf.extjwnl.data.POS;
+import net.sf.extjwnl.data.Synset;
+import net.sf.extjwnl.dictionary.Dictionary;
 
 public class ImageIndex {
 
@@ -53,6 +61,12 @@ public class ImageIndex {
         final Synset synset = label.getSenses().get(0);
         String synsetId = String.format("n%08d", synset.getOffset());
         List<String> urls = fetchLines("http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=" + synsetId);
+
+        if (urls.size() == 1 && !URI.isWellFormedAddress(urls.get(0)))
+            throw new IllegalStateException(String.format("Fetching URLs for '%s' caused problems: '%s'", label.getLemma(), urls.get(0)));
+        if (urls.size() < 100)
+            System.out.println(String.format("WARNING: '%s' only has %s images", label.getLemma(), urls.size()));
+
         for (String url : urls) {
             if (!images.containsKey(url)) images.put(url, new HashSet<>());
             images.get(url).add(label);
