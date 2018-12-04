@@ -1,6 +1,12 @@
 package info.magnolia.ai;
 
-import net.sf.extjwnl.data.IndexWord;
+import static java.util.stream.Collectors.toList;
+
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+
+import org.deeplearning4j.datasets.iterator.IteratorDataSetIterator;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -13,13 +19,14 @@ import org.deeplearning4j.ui.stats.StatsListener;
 import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.deeplearning4j.zoo.PretrainedType;
 import org.deeplearning4j.zoo.model.VGG16;
+import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.activations.Activation;
+import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
-import java.io.IOException;
-import java.util.List;
+import net.sf.extjwnl.data.IndexWord;
 
 public class NetworkManager {
 
@@ -72,19 +79,40 @@ public class NetworkManager {
     public void train(DataSetIterator trainIterator, DataSetIterator testIterator, int epochs) {
         TransferLearningHelper transferHelper = new TransferLearningHelper(network);
 
-        System.out.println(transferHelper.unfrozenGraph().evaluate(testIterator));
-        testIterator.reset();
+        DataSetIterator featurizedTrain = featurize(trainIterator, transferHelper);
+        DataSetIterator featurizedTest = featurize(testIterator, transferHelper);
+
+        List<String> labelStrings = labels.stream().map(IndexWord::getLemma).collect(toList());
+
+        Evaluation evalBefore = transferHelper.unfrozenGraph().evaluate(featurizedTest, labelStrings);
+        System.out.println(evalBefore.stats(false, false));
+        featurizedTest.reset();
 
         for (int i = 0; i < epochs; i++) {
             System.out.println("Starting training epoch " + i);
 
-            transferHelper.fitFeaturized(trainIterator);
-            trainIterator.reset();
+            transferHelper.fitFeaturized(featurizedTrain);
+            featurizedTrain.reset();
 
-            System.out.println(transferHelper.unfrozenGraph().evaluate(testIterator));
-            testIterator.reset();
+            Evaluation eval = transferHelper.unfrozenGraph().evaluate(featurizedTest, labelStrings);
+            System.out.println(eval.stats(false, false));
+            featurizedTest.reset();
         }
 
         System.out.println("Training complete");
+    }
+
+    private DataSetIterator featurize(DataSetIterator dataSetIterator, TransferLearningHelper transferHelper) {
+        return new IteratorDataSetIterator(new Iterator<DataSet>() {
+            @Override
+            public boolean hasNext() {
+                return dataSetIterator.hasNext();
+            }
+
+            @Override
+            public DataSet next() {
+                return transferHelper.featurize(dataSetIterator.next());
+            }
+        }, dataSetIterator.batch());
     }
 }

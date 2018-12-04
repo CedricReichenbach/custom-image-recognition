@@ -71,7 +71,8 @@ public class ImageIndex {
             } else synsetId = null;
         }
         System.out.println();
-        if (synsetId == null) throw new IllegalArgumentException("No supported synset found for label: " + label.getLemma());
+        if (synsetId == null)
+            throw new IllegalArgumentException("No supported synset found for label: " + label.getLemma());
 
         List<String> urls = fetchLines("http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=" + synsetId);
 
@@ -89,7 +90,10 @@ public class ImageIndex {
     private List<String> fetchLines(String url) {
         List<String> lines = new ArrayList<>();
         try (Scanner scanner = new Scanner(new URL(url).openStream())) {
-            while (scanner.hasNextLine()) lines.add(scanner.nextLine());
+            while (scanner.hasNextLine()) {
+                final String line = scanner.nextLine();
+                if (!line.isEmpty()) lines.add(line);
+            }
             return lines;
         } catch (IOException e) {
             throw new RuntimeException(e);

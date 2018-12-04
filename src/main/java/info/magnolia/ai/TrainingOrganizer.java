@@ -1,16 +1,17 @@
 package info.magnolia.ai;
 
-import net.sf.extjwnl.data.IndexWord;
-import org.jetbrains.annotations.NotNull;
-import org.nd4j.linalg.dataset.api.iterator.BaseDatasetIterator;
-import org.nd4j.linalg.dataset.api.iterator.fetcher.DataSetFetcher;
+import static java.util.stream.Collectors.toMap;
 
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import static java.util.stream.Collectors.toMap;
+import org.jetbrains.annotations.NotNull;
+import org.nd4j.linalg.dataset.api.iterator.BaseDatasetIterator;
+import org.nd4j.linalg.dataset.api.iterator.fetcher.DataSetFetcher;
+
+import net.sf.extjwnl.data.IndexWord;
 
 public class TrainingOrganizer {
 
@@ -44,8 +45,8 @@ public class TrainingOrganizer {
     }
 
     public void train() {
-        BaseDatasetIterator evalIterator = buildIterator(this::useForEval);
         BaseDatasetIterator trainIterator = buildIterator(url -> !this.useForEval(url));
+        BaseDatasetIterator evalIterator = buildIterator(this::useForEval);
 
         networkManager.train(trainIterator, evalIterator, EPOCHS);
     }
