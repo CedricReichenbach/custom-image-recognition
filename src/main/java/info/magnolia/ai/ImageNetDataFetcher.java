@@ -59,7 +59,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
     private Optional<DataSet> fetchImage(String url) {
         Optional<INDArray> cached = cache.get(url);
         if (cached.isPresent()) {
-            if (cached.get().isEmpty()) {
+            if (Nd4j.empty().equals(cached.get())) {
                 System.out.println("Skipping image (previous failure signaled by cache): " + url);
                 return Optional.empty();
             }

@@ -4,10 +4,12 @@ import static java.util.stream.Collectors.toList;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.deeplearning4j.datasets.iterator.IteratorDataSetIterator;
+import org.deeplearning4j.datasets.iterator.impl.ListDataSetIterator;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -24,7 +26,9 @@ import org.deeplearning4j.zoo.model.VGG16;
 import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.dataset.DataSet;
+import org.nd4j.linalg.dataset.api.iterator.CachingDataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.dataset.api.iterator.cache.InMemoryDataSetCache;
 import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
@@ -34,19 +38,15 @@ public class NetworkManager {
 
     private final List<IndexWord> labels;
     private final ComputationGraph network;
-    private final File persistenceFile = new File("trained-network");
+    private final File persistenceFile = new File("custom-images-trained-network_" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+    private final InMemoryStatsStorage statsStorage;
 
     public NetworkManager(List<IndexWord> labels) {
         this.labels = labels;
         network = buildNetwork();
 
-        initStats();
-    }
-
-    private void initStats() {
-        InMemoryStatsStorage statsStorage = new InMemoryStatsStorage();
+        statsStorage = new InMemoryStatsStorage();
         UIServer.getInstance().attach(statsStorage);
-        network.setListeners(new StatsListener(statsStorage));
     }
 
     private ComputationGraph buildNetwork() {
@@ -81,6 +81,7 @@ public class NetworkManager {
 
     public void train(DataSetIterator trainIterator, DataSetIterator testIterator, int epochs) {
         TransferLearningHelper transferHelper = new TransferLearningHelper(network);
+        transferHelper.unfrozenGraph().setListeners(new StatsListener(statsStorage));
 
         System.out.println("Going to featurize images...");
         DataSetIterator featurizedTrain = featurize(trainIterator, transferHelper);
@@ -111,6 +112,7 @@ public class NetworkManager {
     public void store() {
         try {
             ModelSerializer.writeModel(network, persistenceFile, true);
+            System.out.println("Stored trained network to: " + persistenceFile.getAbsolutePath());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -123,6 +125,9 @@ public class NetworkManager {
             DataSet dataSet = dataSetIterator.next();
             featurizeds.add(transferHelper.featurize(dataSet));
         }
-        return new IteratorDataSetIterator(featurizeds.iterator(), dataSetIterator.batch());
+        return new CachingDataSetIterator(
+                new ListDataSetIterator<>(featurizeds, dataSetIterator.batch()),
+                new InMemoryDataSetCache()
+        );
     }
 }
