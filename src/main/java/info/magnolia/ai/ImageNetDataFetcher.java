@@ -27,6 +27,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
 
     private final NativeImageLoader imageLoader = new NativeImageLoader(224, 224, 3);
     private final VGG16ImagePreProcessor preProcessor = new VGG16ImagePreProcessor();
+    private final FileSystemCache cache = new FileSystemCache();
 
     private final Map<String, Set<IndexWord>> images;
     private final List<String> urls;
@@ -49,12 +50,19 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(toList());
-        this.initializeCurrFromList(dataSets);
+        if (!dataSets.isEmpty())
+            this.initializeCurrFromList(dataSets);
 
         cursor += numExamples;
     }
 
     private Optional<DataSet> fetchImage(String url) {
+        Optional<INDArray> cached = cache.get(url);
+        if (cached.isPresent()) {
+            System.out.println("Loaded image from cache: " + url);
+            return cached.map(arr -> toDataSet(url, arr));
+        }
+
         try {
             BufferedImage image = ImageIO.read(new URL(url));
             if (image == null) throw new IOException("Failed to read image from url: " + url);
@@ -62,11 +70,18 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
             INDArray matrix = imageLoader.asMatrix(image);
             preProcessor.transform(matrix);
 
-            return Optional.of(new DataSet(matrix, oneHotEncode(images.get(url))));
+            System.out.println("Successfully fetched image: " + url);
+
+            cache.put(url, matrix);
+            return Optional.of(toDataSet(url, matrix));
         } catch (IOException e) {
             System.out.println("Skipping image; failed to fetch: " + url);
             return Optional.empty();
         }
+    }
+
+    private DataSet toDataSet(String url, INDArray matrix) {
+        return new DataSet(matrix, oneHotEncode(images.get(url)));
     }
 
     private INDArray oneHotEncode(Set<IndexWord> indexWords) {

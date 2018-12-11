@@ -3,7 +3,7 @@ package info.magnolia.ai;
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
-import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.deeplearning4j.datasets.iterator.IteratorDataSetIterator;
@@ -79,6 +79,7 @@ public class NetworkManager {
     public void train(DataSetIterator trainIterator, DataSetIterator testIterator, int epochs) {
         TransferLearningHelper transferHelper = new TransferLearningHelper(network);
 
+        System.out.println("Going to featurize images...");
         DataSetIterator featurizedTrain = featurize(trainIterator, transferHelper);
         DataSetIterator featurizedTest = featurize(testIterator, transferHelper);
 
@@ -103,16 +104,12 @@ public class NetworkManager {
     }
 
     private DataSetIterator featurize(DataSetIterator dataSetIterator, TransferLearningHelper transferHelper) {
-        return new IteratorDataSetIterator(new Iterator<DataSet>() {
-            @Override
-            public boolean hasNext() {
-                return dataSetIterator.hasNext();
-            }
-
-            @Override
-            public DataSet next() {
-                return transferHelper.featurize(dataSetIterator.next());
-            }
-        }, dataSetIterator.batch());
+        // featurize ahead of time rather than lazily to avoid issues with multiple workspaces
+        List<DataSet> featurizeds = new LinkedList<>();
+        while (dataSetIterator.hasNext()) {
+            DataSet dataSet = dataSetIterator.next();
+            featurizeds.add(transferHelper.featurize(dataSet));
+        }
+        return new IteratorDataSetIterator(featurizeds.iterator(), dataSetIterator.batch());
     }
 }
