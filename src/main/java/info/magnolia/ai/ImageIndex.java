@@ -62,6 +62,7 @@ public class ImageIndex {
     private void loadForLabel(IndexWord label) {
         System.out.print("Loading image URLs: " + label.getLemma());
 
+        // TODO: Perhaps load for *all* supported synsets matching this label
         String synsetId = null;
         for (Synset synset : label.getSenses()) {
             synsetId = String.format("n%08d", synset.getOffset());

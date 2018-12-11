@@ -16,7 +16,7 @@ public class FileSystemCacheTest {
 
     @Before
     public void setUp() {
-        cache = new FileSystemCache();
+        cache = new FileSystemCache("file-system-array-cache-test");
     }
 
     @After
@@ -35,5 +35,16 @@ public class FileSystemCacheTest {
 
         assertTrue(cache.isCached("foo"));
         assertEquals(array, cache.get("foo").get());
+    }
+
+    @Test
+    public void shouldCacheEmptyArray() {
+        assertFalse(cache.isCached("empty"));
+        assertEquals(Optional.empty(), cache.get("empty"));
+
+        cache.put("empty", Nd4j.empty());
+
+        assertTrue(cache.isCached("empty"));
+        assertEquals(Nd4j.empty(), cache.get("empty").get());
     }
 }

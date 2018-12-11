@@ -16,8 +16,8 @@ public class FileSystemCache {
     private static final String SUFFIX = ".cache";
     private final File dir;
 
-    public FileSystemCache() {
-        dir = new File(System.getProperty("java.io.tmpdir"), "custom-image-recognition-samples");
+    public FileSystemCache(String dirName) {
+        dir = new File(System.getProperty("java.io.tmpdir"), dirName);
         dir.mkdirs();
     }
 
@@ -26,21 +26,26 @@ public class FileSystemCache {
     }
 
     public Optional<INDArray> get(String key) {
-        return Optional.of(getTempFile(key))
-                .flatMap(f -> f.exists() ? Optional.of(f) : Optional.empty())
-                .flatMap(f -> {
-                    try (InputStream stream = new FileInputStream(f)) {
-                        return Optional.of(Nd4j.read(stream));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        return Optional.empty();
-                    }
-                });
+        File file = getTempFile(key);
+
+        if (!file.exists()) return Optional.empty();
+        if (file.length() == 0) return Optional.of(Nd4j.empty());
+
+        try (InputStream stream = new FileInputStream(file)) {
+            return Optional.of(Nd4j.read(stream));
+        } catch (IOException e) {
+            e.printStackTrace();
+            return Optional.empty();
+        }
     }
 
     public void put(String key, INDArray array) {
         try {
-            Nd4j.saveBinary(array, getTempFile(key));
+            if (array.isEmpty())
+                // signal empty array simply by empty file
+                getTempFile(key).createNewFile();
+            else
+                Nd4j.saveBinary(array, getTempFile(key));
         } catch (IOException e) {
             e.printStackTrace();
         }

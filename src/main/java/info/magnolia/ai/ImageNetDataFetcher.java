@@ -27,7 +27,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
 
     private final NativeImageLoader imageLoader = new NativeImageLoader(224, 224, 3);
     private final VGG16ImagePreProcessor preProcessor = new VGG16ImagePreProcessor();
-    private final FileSystemCache cache = new FileSystemCache();
+    private final FileSystemCache cache = new FileSystemCache("custom-image-recognition-samples");
 
     private final Map<String, Set<IndexWord>> images;
     private final List<String> urls;
@@ -59,6 +59,11 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
     private Optional<DataSet> fetchImage(String url) {
         Optional<INDArray> cached = cache.get(url);
         if (cached.isPresent()) {
+            if (cached.get().isEmpty()) {
+                System.out.println("Skipping image (previous failure signaled by cache): " + url);
+                return Optional.empty();
+            }
+
             System.out.println("Loaded image from cache: " + url);
             return cached.map(arr -> toDataSet(url, arr));
         }
@@ -76,6 +81,8 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
             return Optional.of(toDataSet(url, matrix));
         } catch (IOException e) {
             System.out.println("Skipping image; failed to fetch: " + url);
+            // cache empty matrix signaling missing data
+            cache.put(url, Nd4j.empty());
             return Optional.empty();
         }
     }

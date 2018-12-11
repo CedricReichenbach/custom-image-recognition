@@ -2,6 +2,7 @@ package info.magnolia.ai;
 
 import static java.util.stream.Collectors.toList;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
@@ -17,6 +18,7 @@ import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.stats.StatsListener;
 import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
+import org.deeplearning4j.util.ModelSerializer;
 import org.deeplearning4j.zoo.PretrainedType;
 import org.deeplearning4j.zoo.model.VGG16;
 import org.nd4j.evaluation.classification.Evaluation;
@@ -32,6 +34,7 @@ public class NetworkManager {
 
     private final List<IndexWord> labels;
     private final ComputationGraph network;
+    private final File persistenceFile = new File("trained-network");
 
     public NetworkManager(List<IndexWord> labels) {
         this.labels = labels;
@@ -98,9 +101,19 @@ public class NetworkManager {
             Evaluation eval = transferHelper.unfrozenGraph().evaluate(featurizedTest, labelStrings);
             System.out.println(eval.stats(false, false));
             featurizedTest.reset();
+
+            store();
         }
 
         System.out.println("Training complete");
+    }
+
+    public void store() {
+        try {
+            ModelSerializer.writeModel(network, persistenceFile, true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private DataSetIterator featurize(DataSetIterator dataSetIterator, TransferLearningHelper transferHelper) {
