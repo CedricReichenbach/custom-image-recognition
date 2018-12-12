@@ -1,5 +1,7 @@
 package info.magnolia.ai;
 
+import static java.util.stream.Collectors.toSet;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -20,7 +22,6 @@ import org.apache.xerces.util.URI;
 import net.sf.extjwnl.JWNLException;
 import net.sf.extjwnl.data.IndexWord;
 import net.sf.extjwnl.data.POS;
-import net.sf.extjwnl.data.Synset;
 import net.sf.extjwnl.dictionary.Dictionary;
 
 public class ImageIndex {
@@ -60,27 +61,26 @@ public class ImageIndex {
     }
 
     private void loadForLabel(IndexWord label) {
-        System.out.print("Loading image URLs: " + label.getLemma());
+        System.out.println("Loading image URLs: " + label.getLemma());
 
-        // TODO: Perhaps load for *all* supported synsets matching this label
-        String synsetId = null;
-        for (Synset synset : label.getSenses()) {
-            synsetId = String.format("n%08d", synset.getOffset());
-            if (availableSynsets.contains(synsetId)) {
-                System.out.print(" -> " + synset);
-                break;
-            } else synsetId = null;
+        Set<String> synsetIds = label.getSenses().stream()
+                .map(synset -> String.format("n%08d", synset.getOffset()))
+                .filter(availableSynsets::contains)
+                .collect(toSet());
+        if (synsetIds.isEmpty())
+            throw new IllegalArgumentException("No supported synsets found for label: " + label.getLemma());
+
+        Set<String> urls = new HashSet<>();
+        for (String synsetId : synsetIds) {
+            List<String> lines = fetchLines("http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=" + synsetId);
+
+            if (lines.size() == 1 && !URI.isWellFormedAddress(lines.get(0)))
+                throw new IllegalStateException(String.format("Fetching URLs for '%s' caused problems: '%s'", synsetId, lines.get(0)));
+            if (lines.size() < 100)
+                System.out.println(String.format("WARNING: '%s' only has %s images", synsetId, lines.size()));
+
+            urls.addAll(lines);
         }
-        System.out.println();
-        if (synsetId == null)
-            throw new IllegalArgumentException("No supported synset found for label: " + label.getLemma());
-
-        List<String> urls = fetchLines("http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=" + synsetId);
-
-        if (urls.size() == 1 && !URI.isWellFormedAddress(urls.get(0)))
-            throw new IllegalStateException(String.format("Fetching URLs for '%s' caused problems: '%s'", label.getLemma(), urls.get(0)));
-        if (urls.size() < 100)
-            System.out.println(String.format("WARNING: '%s' only has %s images", label.getLemma(), urls.size()));
 
         for (String url : urls) {
             if (!images.containsKey(url)) images.put(url, new HashSet<>());
