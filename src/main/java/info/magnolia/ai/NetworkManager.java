@@ -84,6 +84,7 @@ public class NetworkManager {
         transferHelper.unfrozenGraph().setListeners(new StatsListener(statsStorage));
 
         System.out.println("Going to featurize images...");
+        // TODO: Cache featurized datasets?
         DataSetIterator featurizedTrain = featurize(trainIterator, transferHelper);
         DataSetIterator featurizedTest = featurize(testIterator, transferHelper);
 

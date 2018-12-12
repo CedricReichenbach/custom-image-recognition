@@ -14,10 +14,11 @@ import org.nd4j.linalg.factory.Nd4j;
 public class FileSystemCache {
 
     private static final String SUFFIX = ".cache";
+    private static final String MGNL_FOLDER = ".mgnl";
     private final File dir;
 
     public FileSystemCache(String dirName) {
-        dir = new File(System.getProperty("java.io.tmpdir"), dirName);
+        dir = new File(System.getProperty("user.home") + File.separator + MGNL_FOLDER, dirName);
         dir.mkdirs();
     }
 
