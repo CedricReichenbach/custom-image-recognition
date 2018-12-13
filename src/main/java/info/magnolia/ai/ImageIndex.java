@@ -22,6 +22,7 @@ import org.apache.xerces.util.URI;
 import net.sf.extjwnl.JWNLException;
 import net.sf.extjwnl.data.IndexWord;
 import net.sf.extjwnl.data.POS;
+import net.sf.extjwnl.data.Synset;
 import net.sf.extjwnl.dictionary.Dictionary;
 
 public class ImageIndex {
@@ -38,11 +39,11 @@ public class ImageIndex {
     public ImageIndex() {
         availableSynsets = fetchLines("http://www.image-net.org/api/text/imagenet.synset.obtain_synset_list");
         try {
-            labels = loadLabels();
+            List<IndexWord> requestedLabels = loadLabels();
+            labels = loadImageInfo(requestedLabels);
         } catch (IOException | JWNLException | URISyntaxException e) {
             throw new RuntimeException("Failed to load label list", e);
         }
-        loadImageInfo();
     }
 
     private List<IndexWord> loadLabels() throws IOException, JWNLException, URISyntaxException {
@@ -56,19 +57,31 @@ public class ImageIndex {
         return labels;
     }
 
-    private void loadImageInfo() {
-        labels.forEach(this::loadForLabel);
+    private List<IndexWord> loadImageInfo(List<IndexWord> requestedLabels) {
+        List<IndexWord> supportedLabels = new ArrayList<>();
+        for (IndexWord label : requestedLabels) {
+            try {
+                loadForLabel(label);
+                supportedLabels.add(label);
+            } catch (NoSupportedSynsetException e) {
+                System.out.println("Skipping word because no supported synset: " + label);
+            }
+        }
+        return supportedLabels;
     }
 
-    private void loadForLabel(IndexWord label) {
+    private void loadForLabel(IndexWord label) throws NoSupportedSynsetException {
         System.out.println("Loading image URLs: " + label.getLemma());
 
-        Set<String> synsetIds = label.getSenses().stream()
+        final List<Synset> senses = label.getSenses();
+        // XXX: Necessary to trigger lazy loading, currently not done on stream() due to: https://github.com/extjwnl/extjwnl/issues/25
+        senses.iterator();
+        Set<String> synsetIds = senses.stream()
                 .map(synset -> String.format("n%08d", synset.getOffset()))
                 .filter(availableSynsets::contains)
                 .collect(toSet());
         if (synsetIds.isEmpty())
-            throw new IllegalArgumentException("No supported synsets found for label: " + label.getLemma());
+            throw new NoSupportedSynsetException("No supported synsets found for label: " + label.getLemma());
 
         Set<String> urls = new HashSet<>();
         for (String synsetId : synsetIds) {
@@ -112,5 +125,11 @@ public class ImageIndex {
     @Override
     public String toString() {
         return String.format("ImageIndex (%s labels, %s image URLs)", labels.size(), images.keySet().size());
+    }
+
+    private static class NoSupportedSynsetException extends Exception {
+        NoSupportedSynsetException(String message) {
+            super(message);
+        }
     }
 }

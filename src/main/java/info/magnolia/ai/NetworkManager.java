@@ -4,10 +4,12 @@ import static java.util.stream.Collectors.toList;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.deeplearning4j.datasets.iterator.impl.ListDataSetIterator;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
@@ -39,6 +41,7 @@ public class NetworkManager {
     private final List<IndexWord> labels;
     private final ComputationGraph network;
     private final File persistenceFile = new File("custom-images-trained-network_" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+    private final File labelsFile = new File("custom-images-labels_" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
     private final InMemoryStatsStorage statsStorage;
 
     public NetworkManager(List<IndexWord> labels) {
@@ -114,6 +117,10 @@ public class NetworkManager {
         try {
             ModelSerializer.writeModel(network, persistenceFile, true);
             System.out.println("Stored trained network to: " + persistenceFile.getAbsolutePath());
+
+            List<String> labelStrings = labels.stream().map(IndexWord::getLemma).collect(Collectors.toList());
+            Files.write(labelsFile.toPath(), labelStrings);
+            System.out.println("Stored labels to: " + labelsFile.getAbsolutePath());
         } catch (IOException e) {
             e.printStackTrace();
         }
