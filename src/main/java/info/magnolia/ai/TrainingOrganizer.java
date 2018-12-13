@@ -15,7 +15,7 @@ import net.sf.extjwnl.data.IndexWord;
 
 public class TrainingOrganizer {
 
-    private static final int EPOCHS = 3;
+    private static final int EPOCHS = 20;
 
     private final ImageIndex imageIndex;
     private final NetworkManager networkManager;

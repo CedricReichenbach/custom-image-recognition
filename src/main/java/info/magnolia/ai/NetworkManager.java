@@ -84,7 +84,7 @@ public class NetworkManager {
 
     public void train(DataSetIterator trainIterator, DataSetIterator testIterator, int epochs) {
         TransferLearningHelper transferHelper = new TransferLearningHelper(network);
-        transferHelper.unfrozenGraph().setListeners(new StatsListener(statsStorage));
+        transferHelper.unfrozenGraph().setListeners(new StatsListener(statsStorage, 1));
 
         System.out.println("Going to featurize images...");
         // TODO: Cache featurized datasets?
