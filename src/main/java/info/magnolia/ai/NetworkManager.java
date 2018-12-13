@@ -40,6 +40,7 @@ public class NetworkManager {
 
     private final List<IndexWord> labels;
     private final ComputationGraph network;
+    private final TransferLearningHelper transferHelper;
     private final File persistenceFile = new File("custom-images-trained-network_" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
     private final File labelsFile = new File("custom-images-labels_" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
     private final InMemoryStatsStorage statsStorage;
@@ -47,9 +48,14 @@ public class NetworkManager {
     public NetworkManager(List<IndexWord> labels) {
         this.labels = labels;
         network = buildNetwork();
+        transferHelper = new TransferLearningHelper(network);
 
         statsStorage = new InMemoryStatsStorage();
         UIServer.getInstance().attach(statsStorage);
+    }
+
+    public TransferLearningHelper getTransferHelper() {
+        return transferHelper;
     }
 
     private ComputationGraph buildNetwork() {
@@ -83,13 +89,13 @@ public class NetworkManager {
     }
 
     public void train(DataSetIterator trainIterator, DataSetIterator testIterator, int epochs) {
-        TransferLearningHelper transferHelper = new TransferLearningHelper(network);
         transferHelper.unfrozenGraph().setListeners(new StatsListener(statsStorage, 1));
 
         System.out.println("Going to featurize images...");
         // TODO: Cache featurized datasets?
-        DataSetIterator featurizedTrain = featurize(trainIterator, transferHelper);
-        DataSetIterator featurizedTest = featurize(testIterator, transferHelper);
+        // featurize ahead of time rather than lazily to avoid issues with multiple workspaces
+        DataSetIterator featurizedTrain = preLoad(trainIterator, transferHelper);
+        DataSetIterator featurizedTest = preLoad(testIterator, transferHelper);
 
         List<String> labelStrings = labels.stream().map(IndexWord::getLemma).collect(toList());
 
@@ -126,15 +132,12 @@ public class NetworkManager {
         }
     }
 
-    private DataSetIterator featurize(DataSetIterator dataSetIterator, TransferLearningHelper transferHelper) {
-        // featurize ahead of time rather than lazily to avoid issues with multiple workspaces
-        List<DataSet> featurizeds = new LinkedList<>();
-        while (dataSetIterator.hasNext()) {
-            DataSet dataSet = dataSetIterator.next();
-            featurizeds.add(transferHelper.featurize(dataSet));
-        }
+    private DataSetIterator preLoad(DataSetIterator dataSetIterator, TransferLearningHelper transferHelper) {
+        List<DataSet> preloaded = new LinkedList<>();
+        while (dataSetIterator.hasNext()) preloaded.add(dataSetIterator.next());
+
         return new CachingDataSetIterator(
-                new ListDataSetIterator<>(featurizeds, dataSetIterator.batch()),
+                new ListDataSetIterator<>(preloaded, dataSetIterator.batch()),
                 new InMemoryDataSetCache()
         );
     }

@@ -56,7 +56,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
         cursor += numExamples;
     }
 
-    private Optional<DataSet> fetchImage(String url) {
+    protected Optional<DataSet> fetchImage(String url) {
         Optional<INDArray> cached = cache.get(url);
         if (cached.isPresent()) {
             if (Nd4j.empty().equals(cached.get())) {
