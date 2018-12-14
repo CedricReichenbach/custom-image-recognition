@@ -6,9 +6,11 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.deeplearning4j.nn.transferlearning.TransferLearningHelper;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 
 import net.sf.extjwnl.data.IndexWord;
+import org.nd4j.linalg.factory.Nd4j;
 
 public class FeaturizedFetcher extends ImageNetDataFetcher {
 
@@ -34,5 +36,10 @@ public class FeaturizedFetcher extends ImageNetDataFetcher {
         DataSet featurized = transferHelper.featurize(input);
         featurizedCache.put(url, featurized.getFeatures());
         return featurized;
+    }
+
+    @Override
+    protected INDArray createInputMatrix(int numRows) {
+        return Nd4j.create(numRows, transferHelper.unfrozenGraph().layerInputSize(0));
     }
 }
