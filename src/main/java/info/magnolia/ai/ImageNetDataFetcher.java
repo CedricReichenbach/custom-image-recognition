@@ -15,7 +15,6 @@ import javax.imageio.ImageIO;
 
 import org.datavec.image.loader.NativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.cpu.nativecpu.NDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.fetcher.BaseDataFetcher;
 import org.nd4j.linalg.dataset.api.preprocessor.VGG16ImagePreProcessor;
@@ -94,7 +93,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
     private INDArray oneHotEncode(Set<IndexWord> indexWords) {
         float[] array = new float[labels.size()];
         indexWords.forEach(word -> array[labels.indexOf(word)] = 1);
-        return new NDArray(array);
+        return Nd4j.create(array);
     }
 
     @Override
