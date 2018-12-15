@@ -78,7 +78,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
 
             cache.put(url, matrix);
             return Optional.of(toDataSet(url, matrix));
-        } catch (IOException e) {
+        } catch (Exception e) { // might not just be IOException but e.g. IllegalStateException in case of invalid encoding (server might return 200 with HTML)
             System.out.println("Skipping image; failed to fetch: " + url);
             // cache empty matrix signaling missing data
             cache.put(url, Nd4j.empty());
