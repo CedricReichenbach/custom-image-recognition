@@ -33,7 +33,7 @@ public class TrainingOrganizer {
                 .filter(entry -> filter.test(entry.getKey()))
                 .collect(toMap(Entry::getKey, Entry::getValue));
         DataSetFetcher fetcher = new FeaturizedFetcher(images, imageIndex.getLabels(), networkManager.getTransferHelper());
-        return new BaseDatasetIterator(5, images.size(), fetcher);
+        return new BaseDatasetIterator(20, images.size(), fetcher);
     }
 
     /**

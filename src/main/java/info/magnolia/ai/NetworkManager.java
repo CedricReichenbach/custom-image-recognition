@@ -94,8 +94,8 @@ public class NetworkManager {
         System.out.println("Going to featurize images...");
         // TODO: Cache featurized datasets?
         // featurize ahead of time rather than lazily to avoid issues with multiple workspaces
-        DataSetIterator featurizedTrain = preLoad(trainIterator, transferHelper);
-        DataSetIterator featurizedTest = preLoad(testIterator, transferHelper);
+        DataSetIterator featurizedTrain = preLoad(trainIterator);
+        DataSetIterator featurizedTest = preLoad(testIterator);
 
         List<String> labelStrings = labels.stream().map(IndexWord::getLemma).collect(toList());
 
@@ -132,7 +132,7 @@ public class NetworkManager {
         }
     }
 
-    private DataSetIterator preLoad(DataSetIterator dataSetIterator, TransferLearningHelper transferHelper) {
+    private DataSetIterator preLoad(DataSetIterator dataSetIterator) {
         List<DataSet> preloaded = new LinkedList<>();
         while (dataSetIterator.hasNext()) preloaded.add(dataSetIterator.next());
 
