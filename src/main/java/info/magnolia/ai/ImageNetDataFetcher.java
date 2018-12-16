@@ -44,7 +44,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
     @Override
     public void fetch(int numExamples) {
         List<String> toFetch = urls.subList(cursor, Math.min(cursor + numExamples, urls.size()));
-        List<DataSet> dataSets = toFetch.stream()
+        List<DataSet> dataSets = toFetch.parallelStream()
                 .map(this::fetchImage)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
