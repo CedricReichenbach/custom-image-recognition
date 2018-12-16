@@ -9,13 +9,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.xerces.util.URI;
 
@@ -28,6 +22,8 @@ import net.sf.extjwnl.dictionary.Dictionary;
 public class ImageIndex {
 
     private final List<String> availableSynsets;
+    /** Limit samples per label to reduce imbalance (and reduce training time) */
+    private final int MAX_IMAGES_PER_LABEL = 500;
 
     /**
      * Mapping from url to labels.
@@ -95,10 +91,23 @@ public class ImageIndex {
             urls.addAll(lines);
         }
 
+        urls = limitRandomized(urls);
+
         for (String url : urls) {
             if (!images.containsKey(url)) images.put(url, new HashSet<>());
             images.get(url).add(label);
         }
+    }
+
+    /**
+     * Pick n items given by limit. Items are picked pseudo-randomly but reproducibly (based on hash).
+     */
+    private Set<String> limitRandomized(Set<String> items) {
+        if (items.size() <= MAX_IMAGES_PER_LABEL) return items;
+
+        List<String> list = new ArrayList<>(items);
+        list.sort(Comparator.comparingInt(String::hashCode));
+        return new HashSet<>(list.subList(0, MAX_IMAGES_PER_LABEL));
     }
 
     private List<String> fetchLines(String url) {
