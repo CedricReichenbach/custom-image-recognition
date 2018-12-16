@@ -92,26 +92,25 @@ public class NetworkManager {
         transferHelper.unfrozenGraph().setListeners(new StatsListener(statsStorage, 1));
 
         System.out.println("Going to featurize images...");
-        // TODO: Cache featurized datasets?
-        // featurize ahead of time rather than lazily to avoid issues with multiple workspaces
-        DataSetIterator featurizedTrain = preLoad(trainIterator);
-        DataSetIterator featurizedTest = preLoad(testIterator);
+        // load ahead of time rather than lazily to avoid issues with multiple workspaces (and cache featurized already)
+        preLoad(trainIterator);
+        preLoad(testIterator);
 
         List<String> labelStrings = labels.stream().map(IndexWord::getLemma).collect(toList());
 
-        Evaluation evalBefore = transferHelper.unfrozenGraph().evaluate(featurizedTest, labelStrings);
+        Evaluation evalBefore = transferHelper.unfrozenGraph().evaluate(testIterator, labelStrings);
         System.out.println(evalBefore.stats(false, false));
-        featurizedTest.reset();
+        testIterator.reset();
 
         for (int i = 0; i < epochs; i++) {
             System.out.println("Starting training epoch " + i);
 
-            transferHelper.fitFeaturized(featurizedTrain);
-            featurizedTrain.reset();
+            transferHelper.fitFeaturized(trainIterator);
+            trainIterator.reset();
 
-            Evaluation eval = transferHelper.unfrozenGraph().evaluate(featurizedTest, labelStrings);
+            Evaluation eval = transferHelper.unfrozenGraph().evaluate(testIterator, labelStrings);
             System.out.println(eval.stats(false, false));
-            featurizedTest.reset();
+            testIterator.reset();
 
             store();
         }
@@ -132,13 +131,8 @@ public class NetworkManager {
         }
     }
 
-    private DataSetIterator preLoad(DataSetIterator dataSetIterator) {
-        List<DataSet> preloaded = new LinkedList<>();
-        while (dataSetIterator.hasNext()) preloaded.add(dataSetIterator.next());
-
-        return new CachingDataSetIterator(
-                new ListDataSetIterator<>(preloaded, dataSetIterator.batch()),
-                new InMemoryDataSetCache()
-        );
+    private void preLoad(DataSetIterator dataSetIterator) {
+        while (dataSetIterator.hasNext()) dataSetIterator.next();
+        dataSetIterator.reset();
     }
 }
