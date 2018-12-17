@@ -88,7 +88,9 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
 
             System.out.println("Successfully fetched image: " + url);
 
-            cache.put(url, matrix);
+            // Commented out because only caching not-found ones currently (as found ones are cached in featurized form anyway)
+            // cache.put(url, matrix);
+
             return Optional.of(toDataSet(url, matrix));
         } catch (Exception e) { // might not just be IOException but e.g. IllegalStateException in case of invalid encoding (server might return 200 with HTML)
             System.out.println("Skipping image; failed to fetch: " + url);
