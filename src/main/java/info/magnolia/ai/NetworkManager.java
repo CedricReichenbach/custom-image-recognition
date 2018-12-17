@@ -28,10 +28,14 @@ import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.sf.extjwnl.data.IndexWord;
 
 public class NetworkManager {
+
+    private static final Logger log = LoggerFactory.getLogger(NetworkManager.class);
 
     private final List<IndexWord> labels;
     private final ComputationGraph network;
@@ -77,8 +81,7 @@ public class NetworkManager {
                                 .build(), "fc2")
                 .build();
 
-        System.out.println("Transfer model:");
-        System.out.println(transferGraph.summary());
+        log.info("Transfer model:\n{}", transferGraph.summary());
 
         return transferGraph;
     }
@@ -86,7 +89,7 @@ public class NetworkManager {
     public void train(DataSetIterator trainIterator, DataSetIterator testIterator, int epochs) {
         transferHelper.unfrozenGraph().setListeners(new StatsListener(statsStorage, 1));
 
-        System.out.println("Going to featurize images...");
+        log.info("Going to featurize images...");
         // load ahead of time rather than lazily to avoid issues with multiple workspaces (and cache featurized already)
         preLoad(trainIterator);
         preLoad(testIterator);
@@ -94,33 +97,33 @@ public class NetworkManager {
         List<String> labelStrings = labels.stream().map(IndexWord::getLemma).collect(toList());
 
         Evaluation evalBefore = transferHelper.unfrozenGraph().evaluate(testIterator, labelStrings);
-        System.out.println(evalBefore.stats(false, false));
+        log.info(evalBefore.stats(false, false));
         testIterator.reset();
 
         for (int i = 0; i < epochs; i++) {
-            System.out.println("*** Starting training epoch " + i);
+            log.info("*** Starting training epoch {}", i);
 
             transferHelper.fitFeaturized(trainIterator);
             trainIterator.reset();
 
             Evaluation eval = transferHelper.unfrozenGraph().evaluate(testIterator, labelStrings);
-            System.out.println(eval.stats(false, false));
+            log.info(eval.stats(false, false));
             testIterator.reset();
 
             store();
         }
 
-        System.out.println("TRAINING COMPLETE");
+        log.info("TRAINING COMPLETE");
     }
 
     public void store() {
         try {
             ModelSerializer.writeModel(network, persistenceFile, true);
-            System.out.println("Stored trained network to: " + persistenceFile.getAbsolutePath());
+            log.info("Stored trained network to: {}", persistenceFile.getAbsolutePath());
 
             List<String> labelStrings = labels.stream().map(IndexWord::getLemma).collect(Collectors.toList());
             Files.write(labelsFile.toPath(), labelStrings);
-            System.out.println("Stored labels to: " + labelsFile.getAbsolutePath());
+            log.info("Stored labels to: {}", labelsFile.getAbsolutePath());
         } catch (IOException e) {
             e.printStackTrace();
         }

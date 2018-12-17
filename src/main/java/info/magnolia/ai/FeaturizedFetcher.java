@@ -9,10 +9,14 @@ import org.deeplearning4j.nn.transferlearning.TransferLearningHelper;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.sf.extjwnl.data.IndexWord;
 
 public class FeaturizedFetcher extends ImageNetDataFetcher {
+
+    private static final Logger log = LoggerFactory.getLogger(ImageNetDataFetcher.class);
 
     private final TransferLearningHelper transferHelper;
     private final FileSystemCache featurizedCache = new FileSystemCache("custom-image-recognition-samples_featurized");
@@ -27,7 +31,7 @@ public class FeaturizedFetcher extends ImageNetDataFetcher {
         // featurized arrays are much smaller than image ones, thus faster to load, so check them first
         final Optional<INDArray> featurizedCached = featurizedCache.get(url);
         if (featurizedCached.isPresent()) {
-            System.out.println("Found featurized in cache: " + url);
+            log.debug("Found featurized in cache: " + url);
             return featurizedCached.map(data -> toDataSet(url, data));
         }
 

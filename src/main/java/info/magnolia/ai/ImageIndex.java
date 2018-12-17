@@ -9,9 +9,18 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
 
 import org.apache.xerces.util.URI;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.sf.extjwnl.JWNLException;
 import net.sf.extjwnl.data.IndexWord;
@@ -20,6 +29,8 @@ import net.sf.extjwnl.data.Synset;
 import net.sf.extjwnl.dictionary.Dictionary;
 
 public class ImageIndex {
+
+    private static final Logger log = LoggerFactory.getLogger(ImageIndex.class);
 
     private final List<String> availableSynsets;
     /** Limit samples per label to reduce imbalance (and reduce training time) */
@@ -60,14 +71,14 @@ public class ImageIndex {
                 loadForLabel(label);
                 supportedLabels.add(label);
             } catch (NoSupportedSynsetException e) {
-                System.out.println("Skipping word because no supported synset: " + label);
+                log.warn("Skipping word because no supported synset: {}", label);
             }
         }
         return supportedLabels;
     }
 
     private void loadForLabel(IndexWord label) throws NoSupportedSynsetException {
-        System.out.println("Loading image URLs: " + label.getLemma());
+        log.info("Loading image URLs: {}", label.getLemma());
 
         final List<Synset> senses = label.getSenses();
         // XXX: Necessary to trigger lazy loading, currently not done on stream() due to: https://github.com/extjwnl/extjwnl/issues/25
@@ -86,7 +97,7 @@ public class ImageIndex {
             if (lines.size() == 1 && !URI.isWellFormedAddress(lines.get(0)))
                 throw new IllegalStateException(String.format("Fetching URLs for '%s' caused problems: '%s'", synsetId, lines.get(0)));
             if (lines.size() < 100)
-                System.out.println(String.format("WARNING: '%s' only has %s images", synsetId, lines.size()));
+                log.warn("Synset '{}' only has {} images", synsetId, lines.size());
 
             urls.addAll(lines);
         }

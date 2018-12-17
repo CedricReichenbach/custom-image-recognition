@@ -13,10 +13,14 @@ import org.nd4j.linalg.dataset.api.iterator.CachingDataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.cache.InMemoryDataSetCache;
 import org.nd4j.linalg.dataset.api.iterator.fetcher.DataSetFetcher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.sf.extjwnl.data.IndexWord;
 
 public class TrainingOrganizer {
+
+    private static final Logger log = LoggerFactory.getLogger(TrainingOrganizer.class);
 
     private static final int EPOCHS = 20;
 
@@ -27,7 +31,7 @@ public class TrainingOrganizer {
         this.imageIndex = new ImageIndex();
         this.networkManager = new NetworkManager(imageIndex.getLabels());
 
-        System.out.println(imageIndex);
+        log.info("Image index: {}", imageIndex);
     }
 
     @NotNull

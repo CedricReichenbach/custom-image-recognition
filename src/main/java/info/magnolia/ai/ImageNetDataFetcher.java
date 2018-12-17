@@ -24,10 +24,14 @@ import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.fetcher.BaseDataFetcher;
 import org.nd4j.linalg.dataset.api.preprocessor.VGG16ImagePreProcessor;
 import org.nd4j.linalg.factory.Nd4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.sf.extjwnl.data.IndexWord;
 
 public class ImageNetDataFetcher extends BaseDataFetcher {
+
+    private static final Logger log = LoggerFactory.getLogger(BaseDataFetcher.class);
 
     private static final long FETCH_TIMEOUT = 1000;
 
@@ -52,7 +56,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
 
     @Override
     public void fetch(int numExamples) {
-        System.out.println("Going to fetch " + numExamples + " sample images...");
+        log.info("Going to fetch up to {} sample images, starting at {}...", numExamples, cursor);
 
         List<String> toFetch = urls.subList(cursor, Math.min(cursor + numExamples, urls.size()));
         List<DataSet> dataSets = toFetch.parallelStream()
@@ -65,18 +69,18 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
 
         cursor += numExamples;
 
-        System.out.println("Batch done.");
+        log.info("Batch done");
     }
 
     protected Optional<DataSet> fetchImage(String url) {
         Optional<INDArray> cached = cache.get(url);
         if (cached.isPresent()) {
             if (Nd4j.empty().equals(cached.get())) {
-                System.out.println("Skipping image (previous failure signaled by cache): " + url);
+                log.debug("Skipping image (previous failure signaled by cache): {}", url);
                 return Optional.empty();
             }
 
-            System.out.println("Loaded image from cache: " + url);
+            log.debug("Loaded image from cache: ", url);
             return cached.map(arr -> toDataSet(url, arr));
         }
 
@@ -86,14 +90,14 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
             INDArray matrix = imageLoader.asMatrix(image);
             preProcessor.transform(matrix);
 
-            System.out.println("Successfully fetched image: " + url);
+            log.debug("Successfully fetched image: ", url);
 
             // Commented out because only caching not-found ones currently (as found ones are cached in featurized form anyway)
             // cache.put(url, matrix);
 
             return Optional.of(toDataSet(url, matrix));
         } catch (Exception e) { // might not just be IOException but e.g. IllegalStateException in case of invalid encoding (server might return 200 with HTML)
-            System.out.println("Skipping image; failed to fetch: " + url);
+            log.debug("Skipping image; failed to fetch: ", url);
             // cache empty matrix signaling missing data
             cache.put(url, Nd4j.empty());
             return Optional.empty();
@@ -107,7 +111,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
             if (image == null) throw new IOException("Failed to read image from url: " + url);
             return image;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            // TODO: Report exception on a low log level
+            log.debug("Image-fetching interrupted", e);
             throw new IOException("Fetching image was interrupted: " + url, e);
         }
     }
