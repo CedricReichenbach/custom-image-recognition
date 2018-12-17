@@ -9,6 +9,9 @@ import java.util.function.Predicate;
 
 import org.jetbrains.annotations.NotNull;
 import org.nd4j.linalg.dataset.api.iterator.BaseDatasetIterator;
+import org.nd4j.linalg.dataset.api.iterator.CachingDataSetIterator;
+import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.dataset.api.iterator.cache.InMemoryDataSetCache;
 import org.nd4j.linalg.dataset.api.iterator.fetcher.DataSetFetcher;
 
 import net.sf.extjwnl.data.IndexWord;
@@ -28,12 +31,12 @@ public class TrainingOrganizer {
     }
 
     @NotNull
-    private BaseDatasetIterator buildIterator(Predicate<String> filter) {
+    private DataSetIterator buildIterator(Predicate<String> filter) {
         Map<String, Set<IndexWord>> images = this.imageIndex.getImages().entrySet().stream()
                 .filter(entry -> filter.test(entry.getKey()))
                 .collect(toMap(Entry::getKey, Entry::getValue));
         DataSetFetcher fetcher = new FeaturizedFetcher(images, imageIndex.getLabels(), networkManager.getTransferHelper());
-        return new BaseDatasetIterator(20, images.size(), fetcher);
+        return new CachingDataSetIterator(new BaseDatasetIterator(20, images.size(), fetcher), new InMemoryDataSetCache());
     }
 
     /**
@@ -45,8 +48,8 @@ public class TrainingOrganizer {
     }
 
     public void train() {
-        BaseDatasetIterator trainIterator = buildIterator(url -> !this.useForEval(url));
-        BaseDatasetIterator evalIterator = buildIterator(this::useForEval);
+        DataSetIterator trainIterator = buildIterator(url -> !this.useForEval(url));
+        DataSetIterator evalIterator = buildIterator(this::useForEval);
 
         networkManager.train(trainIterator, evalIterator, EPOCHS);
     }

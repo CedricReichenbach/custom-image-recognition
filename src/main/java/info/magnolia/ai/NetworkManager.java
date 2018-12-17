@@ -7,11 +7,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.deeplearning4j.datasets.iterator.impl.ListDataSetIterator;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -27,10 +25,7 @@ import org.deeplearning4j.zoo.PretrainedType;
 import org.deeplearning4j.zoo.model.VGG16;
 import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.activations.Activation;
-import org.nd4j.linalg.dataset.DataSet;
-import org.nd4j.linalg.dataset.api.iterator.CachingDataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
-import org.nd4j.linalg.dataset.api.iterator.cache.InMemoryDataSetCache;
 import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
@@ -103,7 +98,7 @@ public class NetworkManager {
         testIterator.reset();
 
         for (int i = 0; i < epochs; i++) {
-            System.out.println("Starting training epoch " + i);
+            System.out.println("*** Starting training epoch " + i);
 
             transferHelper.fitFeaturized(trainIterator);
             trainIterator.reset();
@@ -115,7 +110,7 @@ public class NetworkManager {
             store();
         }
 
-        System.out.println("Training complete");
+        System.out.println("TRAINING COMPLETE");
     }
 
     public void store() {
