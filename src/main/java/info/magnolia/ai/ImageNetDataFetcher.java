@@ -10,6 +10,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javax.imageio.ImageIO;
 
@@ -23,6 +28,10 @@ import org.nd4j.linalg.factory.Nd4j;
 import net.sf.extjwnl.data.IndexWord;
 
 public class ImageNetDataFetcher extends BaseDataFetcher {
+
+    private static final long FETCH_TIMEOUT = 1000;
+
+    private final ExecutorService fetcherPool = Executors.newCachedThreadPool();
 
     private final NativeImageLoader imageLoader = new NativeImageLoader(224, 224, 3);
     private final VGG16ImagePreProcessor preProcessor = new VGG16ImagePreProcessor();
@@ -43,6 +52,8 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
 
     @Override
     public void fetch(int numExamples) {
+        System.out.println("Going to fetch " + numExamples + " sample images...");
+
         List<String> toFetch = urls.subList(cursor, Math.min(cursor + numExamples, urls.size()));
         List<DataSet> dataSets = toFetch.parallelStream()
                 .map(this::fetchImage)
@@ -53,6 +64,8 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
             this.initializeCurrFromList(dataSets);
 
         cursor += numExamples;
+
+        System.out.println("Batch done.");
     }
 
     protected Optional<DataSet> fetchImage(String url) {
@@ -68,8 +81,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
         }
 
         try {
-            BufferedImage image = ImageIO.read(new URL(url));
-            if (image == null) throw new IOException("Failed to read image from url: " + url);
+            BufferedImage image = readImage(url);
 
             INDArray matrix = imageLoader.asMatrix(image);
             preProcessor.transform(matrix);
@@ -86,7 +98,19 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
         }
     }
 
-    private DataSet toDataSet(String url, INDArray matrix) {
+    private BufferedImage readImage(String url) throws IOException {
+        try {
+            BufferedImage image = fetcherPool.submit(() -> ImageIO.read(new URL(url)))
+                    .get(FETCH_TIMEOUT, TimeUnit.MILLISECONDS);
+            if (image == null) throw new IOException("Failed to read image from url: " + url);
+            return image;
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            // TODO: Report exception on a low log level
+            throw new IOException("Fetching image was interrupted: " + url, e);
+        }
+    }
+
+    protected DataSet toDataSet(String url, INDArray matrix) {
         return new DataSet(matrix, oneHotEncode(images.get(url)));
     }
 

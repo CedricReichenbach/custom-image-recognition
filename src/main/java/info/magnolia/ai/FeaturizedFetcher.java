@@ -8,9 +8,9 @@ import java.util.Set;
 import org.deeplearning4j.nn.transferlearning.TransferLearningHelper;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
+import org.nd4j.linalg.factory.Nd4j;
 
 import net.sf.extjwnl.data.IndexWord;
-import org.nd4j.linalg.factory.Nd4j;
 
 public class FeaturizedFetcher extends ImageNetDataFetcher {
 
@@ -24,12 +24,15 @@ public class FeaturizedFetcher extends ImageNetDataFetcher {
 
     @Override
     protected Optional<DataSet> fetchImage(String url) {
+        // featurized arrays are much smaller than image ones, thus faster to load, so check them first
+        final Optional<INDArray> featurizedCached = featurizedCache.get(url);
+        if (featurizedCached.isPresent()) {
+            System.out.println("Found featurized in cache: " + url);
+            return featurizedCached.map(data -> toDataSet(url, data));
+        }
+
         return super.fetchImage(url)
-                .map(dataSet ->
-                        featurizedCache.get(url)
-                                .map(featurized -> new DataSet(featurized, dataSet.getLabels()))
-                                .orElse(featurize(dataSet, url))
-                );
+                .map(dataSet -> featurize(dataSet, url));
     }
 
     private DataSet featurize(DataSet input, String url) {
