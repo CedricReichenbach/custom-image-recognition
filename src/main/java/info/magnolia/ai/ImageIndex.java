@@ -33,8 +33,11 @@ public class ImageIndex {
     private static final Logger log = LoggerFactory.getLogger(ImageIndex.class);
 
     private final List<String> availableSynsets;
-    /** Limit samples per label to reduce imbalance (and reduce training time) */
+    /**
+     * Limit samples per label to reduce imbalance (and reduce training time)
+     */
     private final int MAX_IMAGES_PER_LABEL = 500;
+    private final int MIN_IMAGES_PER_LABEL = 100;
 
     /**
      * Mapping from url to labels.
@@ -72,12 +75,14 @@ public class ImageIndex {
                 supportedLabels.add(label);
             } catch (NoSupportedSynsetException e) {
                 log.warn("Skipping word because no supported synset: {}", label);
+            } catch (NotEnoughSamplesException e) {
+                log.warn("Skipping word because not enough sample images: {} ({})", label, e.getMessage());
             }
         }
         return supportedLabels;
     }
 
-    private void loadForLabel(IndexWord label) throws NoSupportedSynsetException {
+    private void loadForLabel(IndexWord label) throws NoSupportedSynsetException, NotEnoughSamplesException {
         log.info("Loading image URLs: {}", label.getLemma());
 
         final List<Synset> senses = label.getSenses();
@@ -94,13 +99,16 @@ public class ImageIndex {
         for (String synsetId : synsetIds) {
             List<String> lines = fetchLines("http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=" + synsetId);
 
-            if (lines.size() == 1 && !URI.isWellFormedAddress(lines.get(0)))
-                throw new IllegalStateException(String.format("Fetching URLs for '%s' caused problems: '%s'", synsetId, lines.get(0)));
+            if (lines.size() == 1 && !lines.get(0).startsWith("http"))
+                log.error("Fetching URLs for '{}' caused problems: '{}'", synsetId, lines.get(0));
             if (lines.size() < 100)
                 log.warn("Synset '{}' only has {} images", synsetId, lines.size());
 
             urls.addAll(lines);
         }
+
+        if (urls.size() < MIN_IMAGES_PER_LABEL)
+            throw new NotEnoughSamplesException(String.format("Only %s sample image(s)", urls.size()));
 
         urls = limitRandomized(urls);
 
@@ -149,6 +157,12 @@ public class ImageIndex {
 
     private static class NoSupportedSynsetException extends Exception {
         NoSupportedSynsetException(String message) {
+            super(message);
+        }
+    }
+
+    private static class NotEnoughSamplesException extends Exception {
+        NotEnoughSamplesException(String message) {
             super(message);
         }
     }
