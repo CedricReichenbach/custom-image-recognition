@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,9 +42,10 @@ public class NetworkManager {
     private final List<IndexWord> labels;
     private final ComputationGraph network;
     private final TransferLearningHelper transferHelper;
-    private final File persistenceFile = new File("custom-images-trained-network_" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
-    private final File labelsFile = new File("custom-images-labels_" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
-    private final File statsFile = new File("custom-images-stats_" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+    private final LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    private final File persistenceFile = new File("custom-images-trained-network_" + now.format(DateTimeFormatter.ISO_DATE_TIME));
+    private final File labelsFile = new File("custom-images-labels_" + now.format(DateTimeFormatter.ISO_DATE_TIME));
+    private final File statsFile = new File("custom-images-stats_" + now.format(DateTimeFormatter.ISO_DATE_TIME));
     private final StatsStorage statsStorage;
 
     public NetworkManager(List<IndexWord> labels) {
@@ -127,7 +129,7 @@ public class NetworkManager {
             Files.write(labelsFile.toPath(), labelStrings);
             log.info("Stored labels to: {}", labelsFile.getAbsolutePath());
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Failed to store outcome", e);
         }
     }
 
