@@ -2,6 +2,9 @@ package info.magnolia.ai;
 
 import static java.util.stream.Collectors.toList;
 
+import info.magnolia.ai.cache.ArrayCache;
+import info.magnolia.ai.cache.FileSystemCache;
+
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
@@ -39,7 +42,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
 
     private final NativeImageLoader imageLoader = new NativeImageLoader(224, 224, 3);
     private final VGG16ImagePreProcessor preProcessor = new VGG16ImagePreProcessor();
-    private final FileSystemCache cache = new FileSystemCache("custom-image-recognition-samples");
+    private final FileSystemCache cache = new ArrayCache("custom-image-recognition-samples");
 
     private final Map<String, Set<IndexWord>> images;
     private final List<String> urls;

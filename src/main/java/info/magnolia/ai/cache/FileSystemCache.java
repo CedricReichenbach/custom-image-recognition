@@ -1,17 +1,18 @@
-package info.magnolia.ai;
+package info.magnolia.ai.cache;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class FileSystemCache {
+public abstract class FileSystemCache<T> {
+
+    private static final Logger log = LoggerFactory.getLogger(FileSystemCache.class);
 
     private static final String SUFFIX = ".cache";
     private static final String MGNL_FOLDER = ".mgnl";
@@ -26,31 +27,30 @@ public class FileSystemCache {
         return get(key).isPresent();
     }
 
-    public Optional<INDArray> get(String key) {
+    public Optional<T> get(String key) {
         File file = getTempFile(key);
 
         if (!file.exists()) return Optional.empty();
-        if (file.length() == 0) return Optional.of(Nd4j.empty());
 
-        try (InputStream stream = new FileInputStream(file)) {
-            return Optional.of(Nd4j.read(stream));
+        try {
+            return readFromFile(file);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Failed to read from cache file", e);
             return Optional.empty();
         }
     }
 
-    public void put(String key, INDArray array) {
+    protected abstract Optional<T> readFromFile(File file) throws IOException;
+
+    public void put(String key, T item) {
         try {
-            if (array.isEmpty())
-                // signal empty array simply by empty file
-                getTempFile(key).createNewFile();
-            else
-                Nd4j.saveBinary(array, getTempFile(key));
+            writeToFile(item, getTempFile(key));
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Failed to write to cache file", e);
         }
     }
+
+    protected abstract void writeToFile(T item, File file) throws IOException;
 
     private File getTempFile(String key) {
         String escaped = key.replaceAll("[^\\w-]+", "_");

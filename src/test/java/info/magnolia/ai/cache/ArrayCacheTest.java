@@ -1,4 +1,4 @@
-package info.magnolia.ai;
+package info.magnolia.ai.cache;
 
 import static org.junit.Assert.*;
 
@@ -10,13 +10,13 @@ import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
-public class FileSystemCacheTest {
+public class ArrayCacheTest {
 
-    private FileSystemCache cache;
+    private ArrayCache cache;
 
     @Before
     public void setUp() {
-        cache = new FileSystemCache("file-system-array-cache-test");
+        cache = new ArrayCache("file-system-array-cache-test");
     }
 
     @After

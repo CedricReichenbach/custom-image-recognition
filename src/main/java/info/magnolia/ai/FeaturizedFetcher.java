@@ -1,5 +1,8 @@
 package info.magnolia.ai;
 
+import info.magnolia.ai.cache.ArrayCache;
+import info.magnolia.ai.cache.FileSystemCache;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,7 +22,7 @@ public class FeaturizedFetcher extends ImageNetDataFetcher {
     private static final Logger log = LoggerFactory.getLogger(ImageNetDataFetcher.class);
 
     private final TransferLearningHelper transferHelper;
-    private final FileSystemCache featurizedCache = new FileSystemCache("custom-image-recognition-samples_featurized");
+    private final FileSystemCache featurizedCache = new ArrayCache("custom-image-recognition-samples_featurized");
 
     public FeaturizedFetcher(Map<String, Set<IndexWord>> images, List<IndexWord> labels, TransferLearningHelper transferHelper) {
         super(images, labels);
