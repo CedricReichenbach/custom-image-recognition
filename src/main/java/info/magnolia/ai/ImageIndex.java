@@ -11,15 +11,8 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +37,7 @@ public class ImageIndex {
     /**
      * Mapping from url to labels.
      */
-    private final Map<String, Set<IndexWord>> images = new HashMap<>();
+    private final Map<String, Set<IndexWord>> images = new ConcurrentHashMap<>();
 
     private final List<IndexWord> labels;
 
@@ -73,16 +66,18 @@ public class ImageIndex {
 
     private List<IndexWord> loadImageInfo(List<IndexWord> requestedLabels) {
         List<IndexWord> supportedLabels = new ArrayList<>();
-        for (IndexWord label : requestedLabels) {
-            try {
-                loadForLabel(label);
-                supportedLabels.add(label);
-            } catch (NoSupportedSynsetException e) {
-                log.warn("Skipping word because no supported synset: {}", label);
-            } catch (NotEnoughSamplesException e) {
-                log.warn("Skipping word because not enough sample images: {} ({})", label, e.getMessage());
-            }
-        }
+        requestedLabels.parallelStream()
+                .forEach(label -> {
+                    try {
+                        loadForLabel(label);
+                        supportedLabels.add(label);
+                    } catch (NoSupportedSynsetException e) {
+                        log.warn("Skipping word because no supported synset: {}", label);
+                    } catch (NotEnoughSamplesException e) {
+                        log.warn("Skipping word because not enough sample images: {} ({})", label, e.getMessage());
+                    }
+                });
+        supportedLabels.sort(Comparator.comparing(IndexWord::getLemma));
         return supportedLabels;
     }
 
@@ -117,7 +112,7 @@ public class ImageIndex {
         urls = limitRandomized(urls);
 
         for (String url : urls) {
-            if (!images.containsKey(url)) images.put(url, new HashSet<>());
+            if (!images.containsKey(url)) images.put(url, Collections.synchronizedSet(new HashSet<>()));
             images.get(url).add(label);
         }
     }
