@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <appenders>
+    <console name="console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+    </console>
+    <!-- TODO: Add timestamp suffix like `_$${date:MM-dd-yyyy}` -->
+    <file name="file" fileName="output.log">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+    </file>
+  </appenders>
+
+  <loggers>
+    <root level="info">
+      <appender-ref ref="console"/>
+      <appender-ref ref="file"/>
+    </root>
+  </loggers>
+</configuration>
