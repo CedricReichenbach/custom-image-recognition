@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -19,7 +20,7 @@ import org.deeplearning4j.nn.transferlearning.TransferLearningHelper;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.stats.StatsListener;
-import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
+import org.deeplearning4j.ui.storage.FileStatsStorage;
 import org.deeplearning4j.util.ModelSerializer;
 import org.deeplearning4j.zoo.PretrainedType;
 import org.deeplearning4j.zoo.model.VGG16;
@@ -42,14 +43,15 @@ public class NetworkManager {
     private final TransferLearningHelper transferHelper;
     private final File persistenceFile = new File("custom-images-trained-network_" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
     private final File labelsFile = new File("custom-images-labels_" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
-    private final InMemoryStatsStorage statsStorage;
+    private final File statsFile = new File("custom-images-stats_" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+    private final StatsStorage statsStorage;
 
     public NetworkManager(List<IndexWord> labels) {
         this.labels = labels;
         network = buildNetwork();
         transferHelper = new TransferLearningHelper(network);
 
-        statsStorage = new InMemoryStatsStorage();
+        statsStorage = new FileStatsStorage(statsFile);
         UIServer.getInstance().attach(statsStorage);
     }
 
