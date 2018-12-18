@@ -2,6 +2,8 @@ package info.magnolia.ai;
 
 import static java.util.stream.Collectors.toSet;
 
+import info.magnolia.ai.cache.LinesCache;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -15,10 +17,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
 
-import org.apache.xerces.util.URI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +47,8 @@ public class ImageIndex {
     private final Map<String, Set<IndexWord>> images = new HashMap<>();
 
     private final List<IndexWord> labels;
+
+    private final LinesCache urlsCache = new LinesCache("imagenet-urls");
 
     public ImageIndex() {
         availableSynsets = fetchLines("http://www.image-net.org/api/text/imagenet.synset.obtain_synset_list");
@@ -130,12 +134,16 @@ public class ImageIndex {
     }
 
     private List<String> fetchLines(String url) {
+        Optional<List<String>> cached = urlsCache.get(url);
+        if (cached.isPresent()) return cached.get();
+
         List<String> lines = new ArrayList<>();
         try (Scanner scanner = new Scanner(new URL(url).openStream())) {
             while (scanner.hasNextLine()) {
                 final String line = scanner.nextLine();
                 if (!line.isEmpty()) lines.add(line);
             }
+            urlsCache.put(url, lines);
             return lines;
         } catch (IOException e) {
             throw new RuntimeException(e);
