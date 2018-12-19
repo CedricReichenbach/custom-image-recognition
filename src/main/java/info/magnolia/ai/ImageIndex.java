@@ -59,8 +59,11 @@ public class ImageIndex {
 
         Dictionary dictionary = Dictionary.getDefaultResourceInstance();
         List<IndexWord> labels = new ArrayList<>();
-        for (String labelString : labelStrings)
-            labels.add(dictionary.lookupIndexWord(POS.NOUN, labelString));
+        for (String labelString : labelStrings) {
+            IndexWord indexWord = dictionary.lookupIndexWord(POS.NOUN, labelString);
+            if (indexWord != null) labels.add(indexWord);
+            else log.warn("Label not known by dictionary, skipping: {}", labelString);
+        }
         return labels;
     }
 

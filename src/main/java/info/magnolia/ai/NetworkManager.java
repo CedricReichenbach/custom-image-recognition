@@ -110,6 +110,8 @@ public class NetworkManager {
             transferHelper.fitFeaturized(trainIterator);
             trainIterator.reset();
 
+            log.info("Epoch done, starting evaluation...");
+
             Evaluation eval = transferHelper.unfrozenGraph().evaluate(testIterator, labelStrings);
             log.info(eval.stats(false, false));
             testIterator.reset();
