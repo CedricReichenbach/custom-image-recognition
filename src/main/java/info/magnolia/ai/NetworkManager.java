@@ -116,10 +116,12 @@ public class NetworkManager {
             log.info(eval.stats(false, false));
             testIterator.reset();
 
-            store();
         }
 
-        log.info("TRAINING COMPLETE");
+        log.info("Training complete, going to store results...");
+        store();
+
+        log.info("DONE");
     }
 
     public void store() {
