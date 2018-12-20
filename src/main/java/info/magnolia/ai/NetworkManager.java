@@ -116,10 +116,16 @@ public class NetworkManager {
             log.info(eval.stats(false, false));
             testIterator.reset();
 
+            if (i > 0 && i % 10 == 0) {
+                log.info("Going to store results...");
+                store();
+            }
         }
 
-        log.info("Training complete, going to store results...");
-        store();
+        if (epochs % 10 != 0) {
+            log.info("Training complete, storing one last time...");
+            store();
+        }
 
         log.info("DONE");
     }
