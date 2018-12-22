@@ -15,3 +15,9 @@ buildNumber.properties
 # IntelliJ
 .idea/
 *.iml
+
+# training results
+custom-images-labels_*
+custom-images-stats_*
+custom-images-trained-network_*
+output.log
