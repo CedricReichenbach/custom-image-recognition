@@ -21,13 +21,14 @@ import org.deeplearning4j.nn.transferlearning.TransferLearningHelper;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.stats.StatsListener;
-import org.deeplearning4j.ui.storage.FileStatsStorage;
+import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.deeplearning4j.util.ModelSerializer;
 import org.deeplearning4j.zoo.PretrainedType;
 import org.deeplearning4j.zoo.model.VGG16;
 import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
@@ -37,6 +38,9 @@ import net.sf.extjwnl.data.IndexWord;
 
 public class NetworkManager {
 
+    private static final boolean STATS_ON = false;
+    private static final int STORE_FREQUENCY = 20;
+
     private static final Logger log = LoggerFactory.getLogger(NetworkManager.class);
 
     private final List<IndexWord> labels;
@@ -45,16 +49,17 @@ public class NetworkManager {
     private final LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     private final File persistenceFile = new File("custom-images-trained-network_" + now.format(DateTimeFormatter.ISO_DATE_TIME));
     private final File labelsFile = new File("custom-images-labels_" + now.format(DateTimeFormatter.ISO_DATE_TIME));
-    private final File statsFile = new File("custom-images-stats_" + now.format(DateTimeFormatter.ISO_DATE_TIME));
-    private final StatsStorage statsStorage;
+    private final StatsStorage statsStorage = new InMemoryStatsStorage();
 
     public NetworkManager(List<IndexWord> labels) {
         this.labels = labels;
         network = buildNetwork();
         transferHelper = new TransferLearningHelper(network);
 
-        statsStorage = new FileStatsStorage(statsFile);
-        UIServer.getInstance().attach(statsStorage);
+        if (STATS_ON) UIServer.getInstance().attach(statsStorage);
+
+        // GC less often
+        Nd4j.getMemoryManager().setAutoGcWindow(5000);
     }
 
     public TransferLearningHelper getTransferHelper() {
@@ -91,7 +96,7 @@ public class NetworkManager {
     }
 
     public void train(DataSetIterator trainIterator, DataSetIterator testIterator, int epochs) {
-        transferHelper.unfrozenGraph().setListeners(new StatsListener(statsStorage, 1));
+        if (STATS_ON) transferHelper.unfrozenGraph().setListeners(new StatsListener(statsStorage, 100));
 
         log.info("Going to featurize images...");
         // load ahead of time rather than lazily to avoid issues with multiple workspaces (and cache featurized already)
@@ -116,13 +121,13 @@ public class NetworkManager {
             log.info(eval.stats(false, false));
             testIterator.reset();
 
-            if (i > 0 && i % 10 == 0) {
+            if (i > 0 && i % STORE_FREQUENCY == 0) {
                 log.info("Going to store results...");
                 store();
             }
         }
 
-        if (epochs % 10 != 0) {
+        if ((epochs - 1) % STORE_FREQUENCY != 0) {
             log.info("Training complete, storing one last time...");
             store();
         }

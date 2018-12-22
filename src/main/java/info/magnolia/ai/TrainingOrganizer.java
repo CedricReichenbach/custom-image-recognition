@@ -22,7 +22,7 @@ public class TrainingOrganizer {
 
     private static final Logger log = LoggerFactory.getLogger(TrainingOrganizer.class);
 
-    private static final int EPOCHS = 20;
+    private static final int EPOCHS = 100;
 
     private final ImageIndex imageIndex;
     private final NetworkManager networkManager;
@@ -40,7 +40,7 @@ public class TrainingOrganizer {
                 .filter(entry -> filter.test(entry.getKey()))
                 .collect(toMap(Entry::getKey, Entry::getValue));
         DataSetFetcher fetcher = new FeaturizedFetcher(images, imageIndex.getLabels(), networkManager.getTransferHelper());
-        return new CachingDataSetIterator(new BaseDatasetIterator(20, images.size(), fetcher), new InMemoryDataSetCache());
+        return new CachingDataSetIterator(new BaseDatasetIterator(50, images.size(), fetcher), new InMemoryDataSetCache());
     }
 
     /**
