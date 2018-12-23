@@ -77,7 +77,7 @@ public class NetworkManager {
 
         final FineTuneConfiguration fineTuneConfiguration = new FineTuneConfiguration.Builder()
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
-                .updater(new Nesterovs(5e-4, 0.5))
+                .updater(new Nesterovs(5e-3, 0.5))
                 .build();
         ComputationGraph transferGraph = new TransferLearning.GraphBuilder(pretrainedNet)
                 .fineTuneConfiguration(fineTuneConfiguration)
