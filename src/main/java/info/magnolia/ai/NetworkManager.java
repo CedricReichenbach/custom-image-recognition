@@ -117,7 +117,7 @@ public class NetworkManager {
 
             log.info("Epoch done, starting evaluation...");
 
-            Evaluation eval = transferHelper.unfrozenGraph().evaluate(testIterator, labelStrings);
+            Evaluation eval = transferHelper.unfrozenGraph().evaluate(testIterator, labelStrings, 3);
             log.info(eval.stats(false, false));
             testIterator.reset();
 

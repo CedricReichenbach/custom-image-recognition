@@ -17,7 +17,6 @@ public class Recognizer {
 
     private final NativeImageLoader imageLoader = new NativeImageLoader(224, 224, 3);
     private final VGG16ImagePreProcessor preProcessor = new VGG16ImagePreProcessor();
-    private final NormalizerMinMaxScaler normalizer = new NormalizerMinMaxScaler();
 
     private final DecimalFormat numberFormat = new DecimalFormat("#.####");
 
@@ -44,6 +43,6 @@ public class Recognizer {
         scores.entrySet().stream()
                 .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // large ones first
                 .limit(3)
-                .forEachOrdered(e -> System.out.println(e.getKey() + ": " + numberFormat.format(e.getValue())));
+                .forEachOrdered(e -> System.out.println(e.getKey() + ":\t " + numberFormat.format(e.getValue())));
     }
 }

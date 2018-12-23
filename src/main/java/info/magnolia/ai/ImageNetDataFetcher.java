@@ -125,6 +125,7 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
 
     private INDArray oneHotEncode(Set<IndexWord> indexWords) {
         float[] array = new float[labels.size()];
+        // FIXME: How does labels sometimes not contain one of the words?
         indexWords.forEach(word -> array[labels.indexOf(word)] = 1);
         return Nd4j.create(array);
     }
