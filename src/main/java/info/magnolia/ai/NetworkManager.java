@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
+import org.deeplearning4j.nn.conf.distribution.NormalDistribution;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.transferlearning.FineTuneConfiguration;
@@ -76,17 +77,18 @@ public class NetworkManager {
 
         final FineTuneConfiguration fineTuneConfiguration = new FineTuneConfiguration.Builder()
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
-                .updater(new Nesterovs(5e-5, 0.5))
+                .updater(new Nesterovs(5e-4, 0.5))
                 .build();
         ComputationGraph transferGraph = new TransferLearning.GraphBuilder(pretrainedNet)
                 .fineTuneConfiguration(fineTuneConfiguration)
                 .setFeatureExtractor("fc2") // freeze this and below
                 .removeVertexKeepConnections("predictions")
                 .addLayer("predictions",
-                        new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
+                        new OutputLayer.Builder(LossFunctions.LossFunction.SQUARED_LOSS)
                                 .nIn(4096).nOut(labels.size())
-                                .weightInit(WeightInit.ZERO)
-                                .activation(Activation.SOFTMAX)
+                                .weightInit(WeightInit.DISTRIBUTION)
+                                .dist(new NormalDistribution(0, 0.2 * (2.0 / (4096 + labels.size()))))
+                                .activation(Activation.TANH)
                                 .build(), "fc2")
                 .build();
 
