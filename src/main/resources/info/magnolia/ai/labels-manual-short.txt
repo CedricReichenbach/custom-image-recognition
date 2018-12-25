@@ -6,13 +6,11 @@ mother
 child
 baby
 student
-moustache
 hand
-foot
 car
 airplane
 bike
-motorbike
+motorcycle
 animal
 cat
 dog
@@ -39,11 +37,11 @@ computer
 laptop
 paper
 keyboard
-music
+instrument
 fire
 snow
 ski
-christmas
+christmas tree
 skateboard
 website
 bulb
@@ -55,5 +53,9 @@ banana
 pear
 drink
 nightclub
-party
 wedding
+beach
+water
+ocean
+sand
+umbrella
