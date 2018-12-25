@@ -31,7 +31,7 @@ public class ImageIndex {
     /**
      * Limit samples per label to reduce imbalance (and reduce training time)
      */
-    private final int MAX_IMAGES_PER_LABEL = 1000;
+    private final int MAX_IMAGES_PER_LABEL = 1200;
     private final int MIN_IMAGES_PER_LABEL = 1000;
 
     /**
@@ -54,7 +54,7 @@ public class ImageIndex {
     }
 
     private List<IndexWord> loadLabels() throws IOException, JWNLException, URISyntaxException {
-        Path path = Paths.get(getClass().getResource("labels-1000.txt").toURI());
+        Path path = Paths.get(getClass().getResource("labels-curated.txt").toURI());
         List<String> labelStrings = Files.readAllLines(path, Charset.forName("utf-8"));
 
         Dictionary dictionary = Dictionary.getDefaultResourceInstance();
