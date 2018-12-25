@@ -46,6 +46,7 @@ public class ImageIndex {
     public ImageIndex() {
         availableSynsets = fetchLines("http://www.image-net.org/api/text/imagenet.synset.obtain_synset_list");
         try {
+            // TODO: Switch to using synset lists for more accuracy (i.e. not multiple meanings per lemma)
             List<IndexWord> requestedLabels = loadLabels();
             labels = loadImageInfo(requestedLabels);
         } catch (IOException | JWNLException | URISyntaxException e) {
@@ -54,7 +55,7 @@ public class ImageIndex {
     }
 
     private List<IndexWord> loadLabels() throws IOException, JWNLException, URISyntaxException {
-        Path path = Paths.get(getClass().getResource("labels-curated.txt").toURI());
+        Path path = Paths.get(getClass().getResource("labels-manual-short.txt").toURI());
         List<String> labelStrings = Files.readAllLines(path, Charset.forName("utf-8"));
 
         Dictionary dictionary = Dictionary.getDefaultResourceInstance();
