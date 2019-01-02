@@ -44,6 +44,7 @@ public class Recognizer {
                 .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // large ones first
                 .limit(3)
                 .forEachOrdered(e ->
-                        System.out.printf("%s:\t %s (%s)%n", e.getKey(), numberFormat.format(e.getValue()), ImageNetUtil.fromImageNetId(e.getKey())));
+                        System.out.printf("%s:\t %s (%s)%n",
+                                e.getKey(), numberFormat.format(e.getValue()), ImageNetUtil.fromImageNetId(e.getKey()).getWords().get(0)));
     }
 }

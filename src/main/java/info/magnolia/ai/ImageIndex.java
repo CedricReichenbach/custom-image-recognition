@@ -69,12 +69,12 @@ public class ImageIndex {
                         log.warn("Skipping word because not enough sample images: {} ({})", label, e.getMessage());
                     }
                 });
-        supportedLabels.sort(Comparator.comparing(Synset::getIndex));
+        supportedLabels.sort(Comparator.comparing(Synset::getOffset));
         return supportedLabels;
     }
 
     private void loadForLabel(Synset label) throws NoSupportedSynsetException, NotEnoughSamplesException {
-        log.info("Loading image URLs: {} ({})", label.getIndex(), label.getGloss());
+        log.info("Loading image URLs: {} ({})", label.getOffset(), label.getWords().get(0).getLemma());
 
         String synsetId = ImageNetUtil.toImageNetId(label);
         if (!availableSynsets.contains(synsetId))
