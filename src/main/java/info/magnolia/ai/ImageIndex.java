@@ -1,27 +1,18 @@
 package info.magnolia.ai;
 
-import static java.util.stream.Collectors.toSet;
-
 import info.magnolia.ai.cache.LinesCache;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
+import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.sf.extjwnl.JWNLException;
-import net.sf.extjwnl.data.IndexWord;
-import net.sf.extjwnl.data.POS;
 import net.sf.extjwnl.data.Synset;
-import net.sf.extjwnl.dictionary.Dictionary;
+import org.yaml.snakeyaml.Yaml;
 
 public class ImageIndex {
 
@@ -31,45 +22,42 @@ public class ImageIndex {
     /**
      * Limit samples per label to reduce imbalance (and reduce training time)
      */
-    private final int MAX_IMAGES_PER_LABEL = 1200;
+    private final int MAX_IMAGES_PER_LABEL = 120;
     private final int MIN_IMAGES_PER_LABEL = 1000;
 
     /**
      * Mapping from url to labels.
      */
-    private final Map<String, Set<IndexWord>> images = new ConcurrentHashMap<>();
+    private final Map<String, Set<Synset>> images = new ConcurrentHashMap<>();
 
-    private final List<IndexWord> labels;
+    private final List<Synset> labels;
 
     private final LinesCache urlsCache = new LinesCache("imagenet-urls");
 
     public ImageIndex() {
         availableSynsets = fetchLines("http://www.image-net.org/api/text/imagenet.synset.obtain_synset_list");
-        try {
-            // TODO: Switch to using synset lists for more accuracy (i.e. not multiple meanings per lemma)
-            List<IndexWord> requestedLabels = loadLabels();
-            labels = loadImageInfo(requestedLabels);
-        } catch (IOException | JWNLException | URISyntaxException e) {
-            throw new RuntimeException("Failed to load label list", e);
+        List<Synset> requestedLabels = loadLabels();
+        labels = loadImageInfo(requestedLabels);
+    }
+
+    private List<Synset> loadLabels() {
+        try (InputStream stream = getClass().getResourceAsStream("labels-synsets-popular.yaml")) {
+            Map<String, String> labelMap = new Yaml().load(stream);
+
+            List<Synset> labels = new ArrayList<>();
+            for (String labelString : labelMap.keySet()) {
+                Synset synset = ImageNetUtil.fromImageNetId(labelString);
+                if (synset == null) throw new IllegalStateException("Synset unknown: " + labelString);
+                labels.add(synset);
+            }
+            return labels;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    private List<IndexWord> loadLabels() throws IOException, JWNLException, URISyntaxException {
-        Path path = Paths.get(getClass().getResource("labels-manual-short.txt").toURI());
-        List<String> labelStrings = Files.readAllLines(path, Charset.forName("utf-8"));
-
-        Dictionary dictionary = Dictionary.getDefaultResourceInstance();
-        List<IndexWord> labels = new ArrayList<>();
-        for (String labelString : labelStrings) {
-            IndexWord indexWord = dictionary.lookupIndexWord(POS.NOUN, labelString);
-            if (indexWord != null) labels.add(indexWord);
-            else log.warn("Label not known by dictionary, skipping: {}", labelString);
-        }
-        return labels;
-    }
-
-    private List<IndexWord> loadImageInfo(List<IndexWord> requestedLabels) {
-        List<IndexWord> supportedLabels = new ArrayList<>();
+    private List<Synset> loadImageInfo(List<Synset> requestedLabels) {
+        List<Synset> supportedLabels = new ArrayList<>();
         requestedLabels.parallelStream()
                 .forEach(label -> {
                     try {
@@ -81,33 +69,21 @@ public class ImageIndex {
                         log.warn("Skipping word because not enough sample images: {} ({})", label, e.getMessage());
                     }
                 });
-        supportedLabels.sort(Comparator.comparing(IndexWord::getLemma));
+        supportedLabels.sort(Comparator.comparing(Synset::getIndex));
         return supportedLabels;
     }
 
-    private void loadForLabel(IndexWord label) throws NoSupportedSynsetException, NotEnoughSamplesException {
-        log.info("Loading image URLs: {}", label.getLemma());
+    private void loadForLabel(Synset label) throws NoSupportedSynsetException, NotEnoughSamplesException {
+        log.info("Loading image URLs: {} ({})", label.getIndex(), label.getGloss());
 
-        final List<Synset> senses = label.getSenses();
-        // XXX: Necessary to trigger lazy loading, currently not done on stream() due to: https://github.com/extjwnl/extjwnl/issues/25
-        senses.iterator();
-        Set<String> synsetIds = senses.stream()
-                .map(synset -> String.format("n%08d", synset.getOffset()))
-                .filter(availableSynsets::contains)
-                .collect(toSet());
-        if (synsetIds.isEmpty())
-            throw new NoSupportedSynsetException("No supported synsets found for label: " + label.getLemma());
+        String synsetId = ImageNetUtil.toImageNetId(label);
+        if (!availableSynsets.contains(synsetId))
+            throw new NoSupportedSynsetException("Synset not supported: " + label.getOffset());
 
-        Set<String> urls = new HashSet<>();
-        for (String synsetId : synsetIds) {
-            List<String> lines = fetchLines("http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=" + synsetId);
+        List<String> urls = fetchLines("http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=" + synsetId);
 
-            if (lines.size() == 1 && !lines.get(0).startsWith("http"))
-                log.error("Fetching URLs for '{}' caused problems: '{}'", synsetId, lines.get(0));
-            if (lines.size() < 100)
-                log.warn("Synset '{}' only has {} images", synsetId, lines.size());
-
-            urls.addAll(lines);
+        if (urls.size() == 1 && !urls.get(0).startsWith("http")) {
+            log.error("Fetching URLs for '{}' caused problems: '{}'", synsetId, urls.get(0));
         }
 
         if (urls.size() < MIN_IMAGES_PER_LABEL)
@@ -124,12 +100,12 @@ public class ImageIndex {
     /**
      * Pick n items given by limit. Items are picked pseudo-randomly but reproducibly (based on hash).
      */
-    private Set<String> limitRandomized(Set<String> items) {
+    private List<String> limitRandomized(List<String> items) {
         if (items.size() <= MAX_IMAGES_PER_LABEL) return items;
 
         List<String> list = new ArrayList<>(items);
         list.sort(Comparator.comparingInt(String::hashCode));
-        return new HashSet<>(list.subList(0, MAX_IMAGES_PER_LABEL));
+        return list.subList(0, MAX_IMAGES_PER_LABEL);
     }
 
     private List<String> fetchLines(String url) {
@@ -149,11 +125,11 @@ public class ImageIndex {
         }
     }
 
-    public List<IndexWord> getLabels() {
+    public List<Synset> getLabels() {
         return new ArrayList<>(labels);
     }
 
-    public Map<String, Set<IndexWord>> getImages() {
+    public Map<String, Set<Synset>> getImages() {
         return images;
     }
 

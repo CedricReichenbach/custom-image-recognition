@@ -7,6 +7,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import net.sf.extjwnl.data.Synset;
 import org.jetbrains.annotations.NotNull;
 import org.nd4j.linalg.dataset.api.iterator.BaseDatasetIterator;
 import org.nd4j.linalg.dataset.api.iterator.CachingDataSetIterator;
@@ -15,8 +16,6 @@ import org.nd4j.linalg.dataset.api.iterator.cache.InMemoryDataSetCache;
 import org.nd4j.linalg.dataset.api.iterator.fetcher.DataSetFetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import net.sf.extjwnl.data.IndexWord;
 
 public class TrainingOrganizer {
 
@@ -36,7 +35,7 @@ public class TrainingOrganizer {
 
     @NotNull
     private DataSetIterator buildIterator(Predicate<String> filter) {
-        Map<String, Set<IndexWord>> images = this.imageIndex.getImages().entrySet().stream()
+        Map<String, Set<Synset>> images = this.imageIndex.getImages().entrySet().stream()
                 .filter(entry -> filter.test(entry.getKey()))
                 .collect(toMap(Entry::getKey, Entry::getValue));
 

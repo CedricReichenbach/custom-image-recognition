@@ -1,5 +1,6 @@
 package info.magnolia.ai.detect;
 
+import info.magnolia.ai.ImageNetUtil;
 import org.datavec.image.loader.NativeImageLoader;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -42,6 +43,7 @@ public class Recognizer {
         scores.entrySet().stream()
                 .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // large ones first
                 .limit(3)
-                .forEachOrdered(e -> System.out.println(e.getKey() + ":\t " + numberFormat.format(e.getValue())));
+                .forEachOrdered(e ->
+                        System.out.printf("%s:\t %s (%s)%n", e.getKey(), numberFormat.format(e.getValue()), ImageNetUtil.fromImageNetId(e.getKey())));
     }
 }

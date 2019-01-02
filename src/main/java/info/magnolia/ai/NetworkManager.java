@@ -11,6 +11,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import net.sf.extjwnl.data.Synset;
 import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.distribution.NormalDistribution;
@@ -35,8 +36,6 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.sf.extjwnl.data.IndexWord;
-
 public class NetworkManager {
 
     private static final boolean STATS_ON = false;
@@ -44,7 +43,7 @@ public class NetworkManager {
 
     private static final Logger log = LoggerFactory.getLogger(NetworkManager.class);
 
-    private final List<IndexWord> labels;
+    private final List<Synset> labels;
     private final ComputationGraph network;
     private final TransferLearningHelper transferHelper;
     private final LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
@@ -52,7 +51,7 @@ public class NetworkManager {
     private final File labelsFile = new File("custom-images-labels_" + now.format(DateTimeFormatter.ISO_DATE_TIME));
     private final StatsStorage statsStorage = new InMemoryStatsStorage();
 
-    public NetworkManager(List<IndexWord> labels) {
+    public NetworkManager(List<Synset> labels) {
         this.labels = labels;
         network = buildNetwork();
         transferHelper = new TransferLearningHelper(network);
@@ -105,7 +104,7 @@ public class NetworkManager {
         preLoad(trainIterator);
         preLoad(testIterator);
 
-        List<String> labelStrings = labels.stream().map(IndexWord::getLemma).collect(toList());
+        List<String> labelStrings = labels.stream().map(ImageNetUtil::toImageNetId).collect(toList());
 
         Evaluation evalBefore = transferHelper.unfrozenGraph().evaluate(testIterator, labelStrings);
         log.info(evalBefore.stats(false, false));
@@ -142,7 +141,7 @@ public class NetworkManager {
             ModelSerializer.writeModel(network, persistenceFile, true);
             log.info("Stored trained network to: {}", persistenceFile.getAbsolutePath());
 
-            List<String> labelStrings = labels.stream().map(IndexWord::getLemma).collect(Collectors.toList());
+            List<String> labelStrings = labels.stream().map(ImageNetUtil::toImageNetId).collect(Collectors.toList());
             Files.write(labelsFile.toPath(), labelStrings);
             log.info("Stored labels to: {}", labelsFile.getAbsolutePath());
         } catch (IOException e) {

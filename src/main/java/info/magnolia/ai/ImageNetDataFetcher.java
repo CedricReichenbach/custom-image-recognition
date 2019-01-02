@@ -21,6 +21,7 @@ import java.util.concurrent.TimeoutException;
 
 import javax.imageio.ImageIO;
 
+import net.sf.extjwnl.data.Synset;
 import org.datavec.image.loader.NativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
@@ -29,8 +30,6 @@ import org.nd4j.linalg.dataset.api.preprocessor.VGG16ImagePreProcessor;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import net.sf.extjwnl.data.IndexWord;
 
 // TODO: Write test for this (some things, like one-hot-encoding, might be incorrect)
 public class ImageNetDataFetcher extends BaseDataFetcher {
@@ -45,11 +44,11 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
     private final VGG16ImagePreProcessor preProcessor = new VGG16ImagePreProcessor();
     private final FileSystemCache cache = new ArrayCache("custom-image-recognition-samples");
 
-    private final Map<String, Set<IndexWord>> images;
+    private final Map<String, Set<Synset>> images;
     private final List<String> urls;
-    private final List<IndexWord> labels;
+    private final List<Synset> labels;
 
-    public ImageNetDataFetcher(Map<String, Set<IndexWord>> images, List<IndexWord> labels) {
+    public ImageNetDataFetcher(Map<String, Set<Synset>> images, List<Synset> labels) {
         this.totalExamples = images.keySet().size();
         this.numOutcomes = labels.size();
 
@@ -124,11 +123,18 @@ public class ImageNetDataFetcher extends BaseDataFetcher {
         return new DataSet(matrix, oneHotEncode(images.get(url)));
     }
 
-    private INDArray oneHotEncode(Set<IndexWord> indexWords) {
+    private INDArray oneHotEncode(Set<Synset> synsets) {
         float[] array = new float[labels.size()];
-        // FIXME: How does labels sometimes not contain one of the words?
-        indexWords.forEach(word -> array[labels.indexOf(word)] = 1);
-        return Nd4j.create(array);
+        // FIXME: How does labels sometimes not contain one of the synsets?
+        try {
+            synsets.forEach(synset -> array[labels.indexOf(synset)] = 1);
+            return Nd4j.create(array);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            log.error("Labels didn't contain an expected synset");
+            log.info("Labels: {}", labels);
+            log.info("Synsets: {}", synsets);
+            throw e;
+        }
     }
 
     @Override

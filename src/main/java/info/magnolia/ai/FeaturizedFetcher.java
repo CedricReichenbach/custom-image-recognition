@@ -8,14 +8,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import net.sf.extjwnl.data.Synset;
 import org.deeplearning4j.nn.transferlearning.TransferLearningHelper;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import net.sf.extjwnl.data.IndexWord;
 
 public class FeaturizedFetcher extends ImageNetDataFetcher {
 
@@ -24,7 +23,7 @@ public class FeaturizedFetcher extends ImageNetDataFetcher {
     private final TransferLearningHelper transferHelper;
     private final FileSystemCache featurizedCache = new ArrayCache("custom-image-recognition-samples_featurized");
 
-    public FeaturizedFetcher(Map<String, Set<IndexWord>> images, List<IndexWord> labels, TransferLearningHelper transferHelper) {
+    public FeaturizedFetcher(Map<String, Set<Synset>> images, List<Synset> labels, TransferLearningHelper transferHelper) {
         super(images, labels);
         this.transferHelper = transferHelper;
     }
