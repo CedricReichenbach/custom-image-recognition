@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,6 +29,7 @@ import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.deeplearning4j.util.ModelSerializer;
 import org.deeplearning4j.zoo.PretrainedType;
 import org.deeplearning4j.zoo.model.VGG16;
+import org.nd4j.evaluation.classification.ConfusionMatrix;
 import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
@@ -39,6 +42,7 @@ import org.slf4j.LoggerFactory;
 public class NetworkManager {
 
     private static final boolean STATS_ON = false;
+    private static final boolean DO_STORE = true;
     private static final int STORE_FREQUENCY = 20;
 
     private static final Logger log = LoggerFactory.getLogger(NetworkManager.class);
@@ -120,20 +124,34 @@ public class NetworkManager {
 
             Evaluation eval = transferHelper.unfrozenGraph().evaluate(testIterator, labelStrings, 3);
             log.info(eval.stats(false, false));
+            log.info("Top confusions:\n{}", getTopConfusions(eval));
             testIterator.reset();
 
-            if (i > 0 && i % STORE_FREQUENCY == 0) {
+            if (DO_STORE && i > 0 && i % STORE_FREQUENCY == 0) {
                 log.info("Going to store results...");
                 store();
             }
         }
 
-        if ((epochs - 1) % STORE_FREQUENCY != 0) {
+        if (DO_STORE && (epochs - 1) % STORE_FREQUENCY != 0) {
             log.info("Training complete, storing one last time...");
             store();
         }
 
         log.info("DONE");
+    }
+
+    private String getTopConfusions(Evaluation eval) {
+        ConfusionMatrix<Integer> confusionMatrix = eval.getConfusion();
+        List<Confusion> confusions = new ArrayList<>();
+        for (int i = 0; i < labels.size(); i++)
+            for (int j = i + 1; j < labels.size(); j++)
+                confusions.add(new Confusion(labels.get(i), labels.get(j), confusionMatrix.getCount(i, j)));
+        confusions.sort(Comparator.comparing(confusion -> -confusion.count)); // negative to have large ones first
+        return confusions.stream()
+                .limit(5)
+                .map(c -> String.format("  %s (actual) vs. %s (predicted): %s", c.actual.getOffset(), c.predicted.getOffset(), c.count))
+                .collect(Collectors.joining("\n"));
     }
 
     public void store() {
@@ -152,5 +170,17 @@ public class NetworkManager {
     private void preLoad(DataSetIterator dataSetIterator) {
         while (dataSetIterator.hasNext()) dataSetIterator.next();
         dataSetIterator.reset();
+    }
+
+    private static class Confusion {
+        final Synset actual;
+        final Synset predicted;
+        final int count;
+
+        Confusion(Synset actual, Synset predicted, int count) {
+            this.actual = actual;
+            this.predicted = predicted;
+            this.count = count;
+        }
     }
 }
