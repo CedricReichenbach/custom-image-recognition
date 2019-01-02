@@ -39,6 +39,9 @@ public class TrainingOrganizer {
         Map<String, Set<IndexWord>> images = this.imageIndex.getImages().entrySet().stream()
                 .filter(entry -> filter.test(entry.getKey()))
                 .collect(toMap(Entry::getKey, Entry::getValue));
+
+        // FIXME: Why are some words in images values not in labels?
+
         DataSetFetcher fetcher = new FeaturizedFetcher(images, imageIndex.getLabels(), networkManager.getTransferHelper());
         return new CachingDataSetIterator(new BaseDatasetIterator(50, images.size(), fetcher), new InMemoryDataSetCache());
     }

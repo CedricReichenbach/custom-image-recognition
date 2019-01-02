@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import net.sf.extjwnl.data.IndexWord;
 
+// TODO: Write test for this (some things, like one-hot-encoding, might be incorrect)
 public class ImageNetDataFetcher extends BaseDataFetcher {
 
     private static final Logger log = LoggerFactory.getLogger(BaseDataFetcher.class);
