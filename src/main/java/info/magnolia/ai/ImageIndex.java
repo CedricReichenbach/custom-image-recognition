@@ -22,7 +22,7 @@ public class ImageIndex {
     /**
      * Limit samples per label to reduce imbalance (and reduce training time)
      */
-    private final int MAX_IMAGES_PER_LABEL = 120;
+    private final int MAX_IMAGES_PER_LABEL = 1000;
     private final int MIN_IMAGES_PER_LABEL = 1000;
 
     /**
@@ -41,7 +41,7 @@ public class ImageIndex {
     }
 
     private List<Synset> loadLabels() {
-        try (InputStream stream = getClass().getResourceAsStream("labels-synsets-popular.yaml")) {
+        try (InputStream stream = getClass().getResourceAsStream("labels-synsets-popular-slimmed.yaml")) {
             Map<String, String> labelMap = new Yaml().load(stream);
 
             List<Synset> labels = new ArrayList<>();
@@ -63,6 +63,7 @@ public class ImageIndex {
                     try {
                         loadForLabel(label);
                         supportedLabels.add(label);
+                        // TODO: Include check for supported hypernyms and add as labels as well (likely to cause confusions otherwise, e.g. flower vs. plant)
                     } catch (NoSupportedSynsetException e) {
                         log.warn("Skipping word because no supported synset: {}", label);
                     } catch (NotEnoughSamplesException e) {

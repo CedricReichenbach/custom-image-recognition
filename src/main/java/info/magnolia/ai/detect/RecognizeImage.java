@@ -11,8 +11,8 @@ import java.util.List;
 
 public class RecognizeImage {
 
-    private static final File MODEL_FILE = new File("custom-images-trained-network_2018-12-22T17:40:02");
-    private static final File LABELS_FILE = new File("custom-images-labels_2018-12-22T17:40:02");
+    private static final File MODEL_FILE = new File("custom-images-trained-network_2019-01-03T00:13:48");
+    private static final File LABELS_FILE = new File("custom-images-labels_2019-01-03T00:13:48");
 
     public static void main(String[] args) throws IOException, URISyntaxException {
         System.out.println("Loading neural network from " + MODEL_FILE.getName());
