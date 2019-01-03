@@ -7,7 +7,7 @@ import net.sf.extjwnl.dictionary.Dictionary;
 
 public class ImageNetUtil {
 
-    private static Dictionary dictionary = null;
+    private static Dictionary dictionary;
     static {
         try {
             dictionary = Dictionary.getDefaultResourceInstance();

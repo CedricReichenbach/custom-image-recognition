@@ -8,6 +8,9 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import net.sf.extjwnl.JWNLException;
+import net.sf.extjwnl.data.PointerUtils;
+import net.sf.extjwnl.data.list.PointerTargetTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +29,12 @@ public class ImageIndex {
     private final int MIN_IMAGES_PER_LABEL = 1000;
 
     /**
+     * Add supported hypernyms as labels too - but careful, this may lead to weird results, e.g. "door" has
+     * "construction" as hypernym.
+     */
+    private final boolean INCLUDE_HYPERNYMS = false;
+
+    /**
      * Mapping from url to labels.
      */
     private final Map<String, Set<Synset>> images = new ConcurrentHashMap<>();
@@ -41,7 +50,7 @@ public class ImageIndex {
     }
 
     private List<Synset> loadLabels() {
-        try (InputStream stream = getClass().getResourceAsStream("labels-synsets-popular-slimmed.yaml")) {
+        try (InputStream stream = getClass().getResourceAsStream("labels-synsets-popular.yaml")) {
             Map<String, String> labelMap = new Yaml().load(stream);
 
             List<Synset> labels = new ArrayList<>();
@@ -63,7 +72,8 @@ public class ImageIndex {
                     try {
                         loadForLabel(label);
                         supportedLabels.add(label);
-                        // TODO: Include check for supported hypernyms and add as labels as well (likely to cause confusions otherwise, e.g. flower vs. plant)
+                        if (INCLUDE_HYPERNYMS)
+                            includeHypernyms(supportedLabels);
                     } catch (NoSupportedSynsetException e) {
                         log.warn("Skipping word because no supported synset: {}", label);
                     } catch (NotEnoughSamplesException e) {
@@ -72,6 +82,20 @@ public class ImageIndex {
                 });
         supportedLabels.sort(Comparator.comparing(Synset::getOffset));
         return supportedLabels;
+    }
+
+    private void includeHypernyms(List<Synset> supportedLabels) {
+        images.values().forEach(labels -> new ArrayList<>(labels).forEach(label -> {
+            try {
+                PointerTargetTree hypernyms = PointerUtils.getHypernymTree(label);
+                hypernyms.toList().forEach(pointerTargetNodes -> pointerTargetNodes.forEach(node -> {
+                    Synset synset = node.getSynset();
+                    if (supportedLabels.contains(synset)) labels.add(synset);
+                }));
+            } catch (JWNLException e) {
+                log.error("Failed to read hypernyms of {}", label);
+            }
+        }));
     }
 
     private void loadForLabel(Synset label) throws NoSupportedSynsetException, NotEnoughSamplesException {
